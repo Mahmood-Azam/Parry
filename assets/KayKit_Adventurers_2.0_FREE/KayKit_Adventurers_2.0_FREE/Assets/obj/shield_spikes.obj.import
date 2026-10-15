@@ -1,0 +1,25 @@
+[remap]
+
+importer="wavefront_obj"
+importer_version=1
+type="Mesh"
+uid="uid://bn134h82dq3ij"
+path="res://.godot/imported/shield_spikes.obj-0ebfde74925caa5af22a86383eb9a138.mesh"
+
+[deps]
+
+files=["res://.godot/imported/shield_spikes.obj-0ebfde74925caa5af22a86383eb9a138.mesh"]
+
+source_file="res://assets/KayKit_Adventurers_2.0_FREE/KayKit_Adventurers_2.0_FREE/Assets/obj/shield_spikes.obj"
+dest_files=["res://.godot/imported/shield_spikes.obj-0ebfde74925caa5af22a86383eb9a138.mesh", "res://.godot/imported/shield_spikes.obj-0ebfde74925caa5af22a86383eb9a138.mesh"]
+
+[params]
+
+generate_tangents=true
+generate_lods=true
+generate_shadow_mesh=true
+generate_lightmap_uv2=false
+generate_lightmap_uv2_texel_size=0.2
+scale_mesh=Vector3(1, 1, 1)
+offset_mesh=Vector3(0, 0, 0)
+force_disable_mesh_compression=false

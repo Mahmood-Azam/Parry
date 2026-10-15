@@ -1,0 +1,61 @@
+[gd_scene format=3 uid="uid://r2njidlucb2b"]
+
+[ext_resource type="Script" uid="uid://cyo82268pkh3d" path="res://player_controller.gd" id="1_0xm2m"]
+[ext_resource type="PackedScene" uid="uid://bcby4fae7pvgr" path="res://assets/KayKit_Adventurers_2.0_FREE/KayKit_Adventurers_2.0_FREE/Characters/gltf/Knight.glb" id="2_0xm2m"]
+
+[sub_resource type="BoxShape3D" id="BoxShape3D_0xm2m"]
+size = Vector3(40, 0.5, 40)
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_h2yge"]
+albedo_color = Color(0.14901961, 0.2, 0.29411766, 1)
+metallic = 0.12
+roughness = 0.82
+
+[sub_resource type="BoxMesh" id="BoxMesh_h2yge"]
+size = Vector3(40, 0.5, 40)
+
+[sub_resource type="CapsuleShape3D" id="CapsuleShape3D_1bvp3"]
+radius = 0.32
+height = 1.7
+
+[node name="Main" type="Node3D" unique_id=97730360]
+
+[node name="DirectionalLight3D" type="DirectionalLight3D" parent="." unique_id=1928618000]
+transform = Transform3D(0.8191522, 0.40557957, -0.4055797, 0, 0.7071069, 0.70710665, 0.5735762, -0.5792279, 0.57922816, 0, 0, 0)
+shadow_enabled = true
+
+[node name="Baseplate" type="StaticBody3D" parent="." unique_id=2029213801]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.25, 0)
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="Baseplate" unique_id=1535632826]
+shape = SubResource("BoxShape3D_0xm2m")
+
+[node name="MeshInstance3D" type="MeshInstance3D" parent="Baseplate" unique_id=2074092910]
+material_override = SubResource("StandardMaterial3D_h2yge")
+mesh = SubResource("BoxMesh_h2yge")
+
+[node name="Player" type="CharacterBody3D" parent="." unique_id=1671350807]
+script = ExtResource("1_0xm2m")
+
+[node name="KayKitKnight" parent="Player" unique_id=1818044185 instance=ExtResource("2_0xm2m")]
+
+[node name="AnimationPlayer" type="AnimationPlayer" parent="Player/KayKitKnight" unique_id=719163504]
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="Player" unique_id=1107804964]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.85, 0)
+shape = SubResource("CapsuleShape3D_1bvp3")
+
+[node name="CameraPivot" type="Node3D" parent="Player" unique_id=308635352]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.35, 0)
+
+[node name="SpringArm3D" type="SpringArm3D" parent="Player/CameraPivot" unique_id=64688351]
+transform = Transform3D(1, 0, 0, 0, 0.9702957, 0.2419218, 0, -0.2419218, 0.9702957, 0, 0, 0)
+spring_length = 5.8
+margin = 0.2
+
+[node name="Camera3D" type="Camera3D" parent="Player/CameraPivot/SpringArm3D" unique_id=1317586598]
+transform = Transform3D(1, 0, 0, 0, 0.97589767, 0.21822967, 0, -0.21822967, 0.97589767, 0, 0, 0)
+current = true
+fov = 58.0
+
+[connection signal="animation_finished" from="Player/KayKitKnight/AnimationPlayer" to="Player" method="_on_animation_finished"]
