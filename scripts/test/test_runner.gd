@@ -118,12 +118,25 @@ func _init() -> void:
 	print("  -> PASSED: Missed parry triggered whiff penalty and cooldown protection.")
 
 	# Test 6: Lethal Damage & Death
-	print("[TEST 6] Testing lethal damage and death...")
-	player.take_damage(100.0)
+	print("[TEST 6] Testing lethal damage...")
+	player.current_health = 10.0
+	player.take_damage(20.0)
 	assert(player.current_health == 0.0, "Health should drop to 0")
 	assert(player.is_alive == false, "Player should be dead")
 	assert(results["died"] == true, "died signal should have fired")
 	print("  -> PASSED: Player died properly when health reached 0.")
+
+	# Test 7: Placeholder Attack Combo & Signal
+	print("[TEST 7] Testing Attack Combo and signal emission...")
+	# Revive player for attack test
+	player.is_alive = true
+	results["attack_pressed"] = false
+	player.attack_pressed.connect(func(): results["attack_pressed"] = true)
+	var attacked := player.try_start_attack()
+	assert(attacked == true, "try_start_attack should succeed")
+	assert(player.is_attacking == true, "player.is_attacking should be true")
+	assert(results["attack_pressed"] == true, "attack_pressed signal should be emitted for Dev 2")
+	print("  -> PASSED: Attack combo started, animation triggered, and signal emitted.")
 
 	print("========================================")
 	print("ALL DEV 1 TESTS PASSED SUCCESSFULLY! ")

@@ -219,7 +219,8 @@ layout_mode = 2
 [node name="ControlsLabel" type="Label" parent="TestHUD/Panel/VBoxContainer"]
 layout_mode = 2
 text = "Controls:
-• WASD: Move
+• WASD: Move (Crisp stop & pivot)
 • Mouse: Orbit Camera (ESC to unlock)
+• Left Click: Sword Attack (Combo)
 • Right Click / F / Q: Parry (0.12s Perfect)
 • Space / Shift: Shadow Dash (Invulnerable)"

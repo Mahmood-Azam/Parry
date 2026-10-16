@@ -30,6 +30,8 @@ func _process(_delta: float) -> void:
 		status_text = "[PARRYING (%s)]" % window_type
 	elif _player.is_dashing:
 		status_text = "[SHADOW DASHING (INVULNERABLE)]"
+	elif _player.is_attacking:
+		status_text = "[ATTACKING]"
 	elif _player.parry_cooldown_timer > 0.0:
 		status_text = "[Parry Recovery: %.2fs]" % _player.parry_cooldown_timer
 	elif _player.dash_cooldown_timer > 0.0:

@@ -18,20 +18,26 @@ signal attack_pressed()
 # --- Movement Configuration ---
 @export_group("Movement")
 @export var move_speed: float = 6.0
-@export var acceleration: float = 24.0
-@export var friction: float = 30.0
-@export var rotation_speed: float = 14.0
+@export var acceleration: float = 34.0               ## Startup acceleration for responsive movement.
+@export var friction: float = 40.0                   ## General deceleration.
+@export var stopping_friction: float = 65.0          ## High stopping friction to eliminate unwanted sliding.
+@export var turn_friction_multiplier: float = 2.4    ## Sharp braking multiplier when reversing directions.
+@export var rotation_speed: float = 16.0
 @export var gravity: float = 20.0
 
 # --- Health Configuration ---
 @export_group("Health")
 @export var max_health: float = 100.0
 
+# --- Attack Configuration ---
+@export_group("Combat")
+@export var attack_duration: float = 0.32            ## Duration of attack swing lock before next action.
+
 # --- Parry Configuration ---
 @export_group("Parry")
-@export var parry_window: float = 0.35            ## Total duration of parry window in seconds.
-@export var perfect_parry_window: float = 0.12    ## First portion of the window that triggers a Perfect Parry.
-@export var parry_cooldown: float = 0.45          ## Recovery cooldown incurred when a parry is missed/whiffed.
+@export var parry_window: float = 0.35               ## Total duration of parry window in seconds.
+@export var perfect_parry_window: float = 0.12       ## First portion of the window that triggers a Perfect Parry.
+@export var parry_cooldown: float = 0.45             ## Recovery cooldown incurred when a parry is missed/whiffed.
 
 # --- Shadow Dash Configuration ---
 @export_group("Shadow Dash")
@@ -51,6 +57,10 @@ signal attack_pressed()
 @onready var character_mesh: MeshInstance3D = $Visuals/CharacterMesh
 @onready var sword_mesh: MeshInstance3D = $Visuals/SwordMesh
 @onready var parry_aura: MeshInstance3D = $Visuals/ParryAura
+@onready var clash_sparks: CPUParticles3D = $Visuals/ClashSparks
+@onready var clash_light: OmniLight3D = $Visuals/ClashLight
+@onready var parry_shockwave: MeshInstance3D = $Visuals/ParryShockwave
+@onready var anim_player: AnimationPlayer = $AnimationPlayer
 @onready var camera_pivot: Node3D = $CameraPivot
 @onready var spring_arm: SpringArm3D = $CameraPivot/SpringArm3D
 @onready var camera: Camera3D = $CameraPivot/SpringArm3D/Camera3D
@@ -59,6 +69,11 @@ signal attack_pressed()
 var current_health: float = 100.0
 var is_alive: bool = true
 var is_invulnerable: bool = false
+
+# Attack state
+var is_attacking: bool = false
+var attack_timer: float = 0.0
+var attack_combo_step: int = 0
 
 # Parry state
 var is_parrying: bool = false
@@ -70,6 +85,10 @@ var is_dashing: bool = false
 var dash_timer: float = 0.0
 var dash_cooldown_timer: float = 0.0
 var dash_direction: Vector3 = Vector3.FORWARD
+
+# Camera screen shake
+var camera_trauma: float = 0.0
+var _initial_cam_pos: Vector3 = Vector3.ZERO
 
 # Visual feedback
 var _original_material: StandardMaterial3D
@@ -83,12 +102,24 @@ func _ready() -> void:
 	# Setup mouse capture
 	Input.set_mouse_mode(Input.MOUSE_MODE_CAPTURED)
 	
+	if camera:
+		_initial_cam_pos = camera.position
+		
 	if parry_aura:
 		parry_aura.visible = false
+	if parry_shockwave:
+		parry_shockwave.visible = false
+	if clash_light:
+		clash_light.light_energy = 0.0
 		
 	# Cache material for hit flash
 	if character_mesh and character_mesh.get_surface_override_material(0):
 		_original_material = character_mesh.get_surface_override_material(0).duplicate()
+
+
+func _exit_tree() -> void:
+	# Guarantee normal time scale on scene changes
+	Engine.time_scale = 1.0
 
 
 func _unhandled_input(event: InputEvent) -> void:
@@ -113,7 +144,11 @@ func _unhandled_input(event: InputEvent) -> void:
 	elif event.is_action_pressed("dash"):
 		try_start_dash()
 	elif event.is_action_pressed("attack"):
-		emit_signal("attack_pressed")
+		try_start_attack()
+
+
+func _process(delta: float) -> void:
+	_process_screen_shake(delta)
 
 
 func _physics_process(delta: float) -> void:
@@ -154,8 +189,12 @@ func _process_regular_movement(delta: float) -> void:
 		input_vector.x += 1.0
 	input_vector = input_vector.normalized()
 
-	# If parrying, reduce movement speed to maintain combat weight
-	var speed_multiplier := 0.4 if is_parrying else 1.0
+	# Reduce speed slightly during defensive parry stance or active swing
+	var speed_multiplier := 1.0
+	if is_parrying:
+		speed_multiplier = 0.35
+	elif is_attacking:
+		speed_multiplier = 0.65
 
 	# Convert 2D input to 3D movement relative to camera yaw
 	var cam_yaw: float = camera_pivot.rotation.y
@@ -167,8 +206,19 @@ func _process_regular_movement(delta: float) -> void:
 	var target_velocity_xz := move_dir * (move_speed * speed_multiplier)
 	var current_velocity_xz := Vector3(velocity.x, 0.0, velocity.z)
 
-	var accel_rate := acceleration if move_dir.length_squared() > 0.001 else friction
-	current_velocity_xz = current_velocity_xz.move_toward(target_velocity_xz, accel_rate * delta)
+	# Precise friction logic: eliminate sliding and ensure sharp braking
+	if move_dir.length_squared() > 0.001:
+		var accel_rate := acceleration
+		# If user suddenly reverses direction, apply sharp turn braking
+		if current_velocity_xz.dot(target_velocity_xz) < 0.0:
+			accel_rate = acceleration * turn_friction_multiplier
+		current_velocity_xz = current_velocity_xz.move_toward(target_velocity_xz, accel_rate * delta)
+	else:
+		# Released keys: apply strong stopping friction
+		current_velocity_xz = current_velocity_xz.move_toward(Vector3.ZERO, stopping_friction * delta)
+		# Snap to zero to eliminate ice-skating micro-drifts
+		if current_velocity_xz.length_squared() < 0.05:
+			current_velocity_xz = Vector3.ZERO
 
 	velocity.x = current_velocity_xz.x
 	velocity.z = current_velocity_xz.z
@@ -185,15 +235,52 @@ func _process_dash_movement(_delta: float) -> void:
 	velocity.z = dash_direction.z * dash_speed
 
 
-# --- Camera Handling ---
+# --- Camera Handling & Screen Shake ---
 func _handle_camera_rotation(relative_motion: Vector2) -> void:
-	# Rotate horizontal (yaw)
 	camera_pivot.rotate_y(-relative_motion.x * mouse_sensitivity)
-	
-	# Rotate vertical (pitch) on spring_arm
 	spring_arm.rotate_x(-relative_motion.y * mouse_sensitivity)
 	var pitch_rad := spring_arm.rotation.x
 	spring_arm.rotation.x = clamp(pitch_rad, deg_to_rad(min_pitch), deg_to_rad(max_pitch))
+
+
+func _add_camera_trauma(amount: float) -> void:
+	camera_trauma = clamp(camera_trauma + amount, 0.0, 1.0)
+
+
+func _process_screen_shake(delta: float) -> void:
+	if not camera:
+		return
+	if camera_trauma > 0.0:
+		camera_trauma = max(0.0, camera_trauma - delta * 3.5)
+		var shake := camera_trauma * camera_trauma * 0.16
+		camera.position = _initial_cam_pos + Vector3(
+			randf_range(-shake, shake),
+			randf_range(-shake, shake),
+			0.0
+		)
+	else:
+		camera.position = _initial_cam_pos
+
+
+# --- Attack Combo Mechanics ---
+func try_start_attack() -> bool:
+	if not is_alive or is_dashing or is_parrying:
+		return false
+
+	is_attacking = true
+	attack_timer = attack_duration
+
+	# Alternate 2-hit combo animations
+	if anim_player:
+		if attack_combo_step == 0:
+			anim_player.play("attack_1")
+			attack_combo_step = 1
+		else:
+			anim_player.play("attack_2")
+			attack_combo_step = 0
+
+	emit_signal("attack_pressed")
+	return true
 
 
 # --- Parry Mechanics ---
@@ -203,7 +290,11 @@ func try_start_parry() -> bool:
 
 	is_parrying = true
 	parry_timer = 0.0
+	is_attacking = false # Cancel swing into parry
 	
+	if anim_player:
+		anim_player.play("parry_stance")
+		
 	if parry_aura:
 		parry_aura.visible = true
 	
@@ -218,9 +309,10 @@ func _end_parry(missed: bool) -> void:
 		
 	if missed:
 		parry_cooldown_timer = parry_cooldown
+		if anim_player:
+			anim_player.play("RESET")
 		emit_signal("parry_failed")
 	else:
-		# Successful parries don't lock player in long cooldown
 		parry_cooldown_timer = 0.1
 
 
@@ -229,11 +321,10 @@ func try_start_dash() -> bool:
 	if not is_alive or is_dashing or dash_cooldown_timer > 0.0:
 		return false
 
-	# Cancel parry if dashing
 	if is_parrying:
 		_end_parry(false)
+	is_attacking = false
 
-	# Calculate dash direction from movement input, or fallback to forward facing
 	var input_vector := Vector2.ZERO
 	if Input.is_action_pressed("move_forward"):
 		input_vector.y -= 1.0
@@ -249,7 +340,6 @@ func try_start_dash() -> bool:
 		var rotated := input_vector.normalized().rotated(-cam_yaw)
 		dash_direction = Vector3(rotated.x, 0.0, rotated.y).normalized()
 	else:
-		# Dash in visual forward direction
 		dash_direction = -visual_root.global_transform.basis.z.normalized()
 		dash_direction.y = 0.0
 		if dash_direction.length_squared() < 0.001:
@@ -271,12 +361,15 @@ func _end_dash() -> void:
 	is_dashing = false
 	is_invulnerable = false
 	_set_shadow_visual(false)
+	
+	# Stop post-dash sliding by damping velocity back down to normal movement speed
+	velocity.x = dash_direction.x * (move_speed * 0.7)
+	velocity.z = dash_direction.z * (move_speed * 0.7)
+	
 	emit_signal("dash_finished")
 
 
 # --- Damage & Combat Interface ---
-## Main interface called when an attack hits the player.
-## Returns true if damage was dealt, or false if parried/evaded.
 func take_damage(amount: float, attacker: Node = null, attack_type: String = "melee", attack_data: Dictionary = {}) -> bool:
 	if not is_alive:
 		return false
@@ -291,7 +384,7 @@ func take_damage(amount: float, attacker: Node = null, attack_type: String = "me
 		var is_perfect: bool = (parry_timer <= perfect_parry_window)
 		_end_parry(false)
 		
-		# Visual/audio trigger hook
+		# Visceral audio/visual impact feedback
 		_trigger_parry_feedback(is_perfect)
 		
 		emit_signal("parry_success", attacker, is_perfect, attack_data)
@@ -302,6 +395,7 @@ func take_damage(amount: float, attacker: Node = null, attack_type: String = "me
 	emit_signal("damaged", amount, attacker)
 	emit_signal("health_changed", current_health, max_health)
 	_trigger_hit_flash()
+	_add_camera_trauma(0.35)
 
 	if current_health <= 0.0:
 		_die()
@@ -320,13 +414,23 @@ func _die() -> void:
 	is_alive = false
 	is_parrying = false
 	is_dashing = false
+	is_attacking = false
+	Engine.time_scale = 1.0
 	if parry_aura:
 		parry_aura.visible = false
+	if anim_player:
+		anim_player.play("RESET")
 	emit_signal("died")
 
 
 # --- Timers and Updates ---
 func _update_timers(delta: float) -> void:
+	# Attack timer
+	if is_attacking:
+		attack_timer -= delta
+		if attack_timer <= 0.0:
+			is_attacking = false
+
 	# Parry timer
 	if is_parrying:
 		parry_timer += delta
@@ -350,7 +454,7 @@ func _update_timers(delta: float) -> void:
 			character_mesh.set_surface_override_material(0, _original_material)
 
 
-# --- Visual Feedbacks ---
+# --- Visual Feedbacks & Satisfaction Effects ---
 func _trigger_hit_flash() -> void:
 	if character_mesh:
 		var flash_mat := StandardMaterial3D.new()
@@ -363,32 +467,64 @@ func _trigger_hit_flash() -> void:
 
 
 func _trigger_parry_feedback(is_perfect: bool) -> void:
-	if parry_aura:
-		var aura_mat := StandardMaterial3D.new()
-		aura_mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
-		if is_perfect:
-			# Gold / cyan brilliant flash for perfect parry
-			aura_mat.albedo_color = Color(0.2, 0.9, 1.0, 0.9)
-			aura_mat.emission_enabled = true
-			aura_mat.emission = Color(0.2, 0.9, 1.0)
-			aura_mat.emission_energy_multiplier = 4.0
-		else:
-			# Standard bright blue flash
-			aura_mat.albedo_color = Color(0.2, 0.5, 1.0, 0.7)
-			aura_mat.emission_enabled = true
-			aura_mat.emission = Color(0.2, 0.5, 1.0)
-			aura_mat.emission_energy_multiplier = 2.0
-		parry_aura.set_surface_override_material(0, aura_mat)
-		parry_aura.visible = true
-		
-		# Quick fade out using a tween
-		var tween := create_tween()
-		tween.tween_property(parry_aura, "scale", Vector3(1.6, 1.6, 1.6), 0.15).from(Vector3(0.9, 0.9, 0.9))
-		tween.parallel().tween_property(aura_mat, "albedo_color:a", 0.0, 0.15)
-		tween.tween_callback(func(): 
-			parry_aura.visible = false
-			parry_aura.scale = Vector3.ONE
+	# 1. Screen Shake Impact
+	_add_camera_trauma(0.58 if is_perfect else 0.28)
+
+	# 2. Explosive Clash Sparks
+	if clash_sparks:
+		clash_sparks.restart()
+		clash_sparks.emitting = true
+
+	# 3. Dynamic Clash Light Burst
+	if clash_light:
+		clash_light.light_color = Color(1.0, 0.88, 0.3) if is_perfect else Color(0.35, 0.8, 1.0)
+		clash_light.light_energy = 9.0 if is_perfect else 4.5
+		var light_tween := create_tween()
+		light_tween.tween_property(clash_light, "light_energy", 0.0, 0.14)
+
+	# 4. Expanding Shockwave Ring
+	if parry_shockwave:
+		var shock_mat := parry_shockwave.get_surface_override_material(0)
+		if not shock_mat and parry_shockwave.mesh and parry_shockwave.mesh.material:
+			shock_mat = parry_shockwave.mesh.material.duplicate()
+			parry_shockwave.set_surface_override_material(0, shock_mat)
+		elif shock_mat:
+			shock_mat = shock_mat.duplicate()
+			parry_shockwave.set_surface_override_material(0, shock_mat)
+
+		if shock_mat:
+			shock_mat.albedo_color = Color(1.0, 0.85, 0.2, 0.95) if is_perfect else Color(0.3, 0.85, 1.0, 0.8)
+
+		parry_shockwave.visible = true
+		parry_shockwave.scale = Vector3(0.2, 0.2, 0.2)
+		var max_scale := Vector3(3.2, 3.2, 3.2) if is_perfect else Vector3(2.2, 2.2, 2.2)
+		var wave_tween := create_tween()
+		wave_tween.tween_property(parry_shockwave, "scale", max_scale, 0.18)
+		if shock_mat:
+			wave_tween.parallel().tween_property(shock_mat, "albedo_color:a", 0.0, 0.18)
+		wave_tween.tween_callback(func():
+			parry_shockwave.visible = false
+			parry_shockwave.scale = Vector3.ONE
 		)
+
+	# 5. Sekiro-Style Micro Hit-Stop (tactile pause on deflection)
+	if is_perfect:
+		_trigger_hit_stop(0.06)
+	else:
+		_trigger_hit_stop(0.02)
+
+	# 6. Reset Sword Animation
+	if anim_player:
+		anim_player.play("RESET")
+
+
+func _trigger_hit_stop(real_seconds: float) -> void:
+	Engine.time_scale = 0.05
+	# ignore_time_scale=true ensures the timer fires in real time
+	var timer := get_tree().create_timer(real_seconds, true, false, true)
+	timer.timeout.connect(func():
+		Engine.time_scale = 1.0
+	)
 
 
 func _set_shadow_visual(active: bool) -> void:
