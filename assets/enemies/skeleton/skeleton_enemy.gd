@@ -1,0 +1,370 @@
+extends CharacterBody3D
+
+@export var move_speed: float = 2.6
+@export var attack_range: float = 1.45
+@export var attack_cooldown: float = 2.15
+@export var turn_speed: float = 8.0
+@export var attack_alignment_angle: float = 20.0
+@export var attack_damage: float = 15.0
+@export_range(0.0, 1.0, 0.01) var attack_hit_time: float = 0.30 ## Animation-normalized contact point for the visible strike.
+@export var parry_contact_lead: float = 0.12 ## How early the visible strike can be parried.
+@export var parry_contact_linger: float = 0.10 ## How long the contact remains parryable.
+@export var attack_hit_range_padding: float = 0.25
+@export var default_parry_stun_duration: float = 1.0
+@export var attack_animation_speed_scale: float = 0.88
+@export var max_health: float = 100.0
+@export var show_debug_hitboxes: bool = true
+
+@onready var player_target: Node3D = get_node_or_null("../Player") as Node3D
+@onready var animation_player: AnimationPlayer = $SkeletonModel/AnimationPlayer
+@onready var skeleton_model: Node3D = $SkeletonModel
+
+var gravity: float = ProjectSettings.get_setting("physics/3d/default_gravity")
+var attack_timer: float = 0.0
+var is_attacking: bool = false
+var attack_has_hit: bool = false
+var stun_remaining: float = 0.0
+var current_health: float = 100.0
+var health_bar: ProgressBar
+var health_bar_layer: CanvasLayer
+var current_animation: StringName = &""
+var target: Node3D
+var debug_body_mesh: MeshInstance3D
+var debug_attack_mesh: MeshInstance3D
+var debug_attack_ring: MeshInstance3D
+var debug_state_label: Label3D
+var debug_body_material: StandardMaterial3D
+var debug_attack_material: StandardMaterial3D
+var attack_sound: AudioStreamPlayer
+var attack_audio_stream: AudioStream = preload("res://assets/audio/Attack.mp3")
+var stun_pose_elapsed: float = 0.0
+var stun_pose_base_rotation: Vector3
+var stun_pose_base_position: Vector3
+
+signal health_changed(current: float, maximum: float)
+signal died()
+
+func _ready() -> void:
+	current_health = max_health
+	add_to_group("enemy")
+	target = player_target
+	stun_pose_base_rotation = skeleton_model.rotation
+	stun_pose_base_position = skeleton_model.position
+	_setup_attack_audio()
+	_setup_debug_hitboxes()
+	_setup_health_bar()
+	for animation_name in [&"Lesha_idle", &"Lesha_walk"]:
+		if animation_player.has_animation(animation_name):
+			animation_player.get_animation(animation_name).loop_mode = Animation.LOOP_LINEAR
+	animation_player.animation_finished.connect(_on_animation_finished)
+	_play(&"Lesha_idle")
+
+func _physics_process(delta: float) -> void:
+	if stun_remaining > 0.0:
+		stun_remaining = maxf(stun_remaining - delta, 0.0)
+		stun_pose_elapsed += delta
+		is_attacking = false
+		velocity.x = move_toward(velocity.x, 0.0, move_speed * 8.0 * delta)
+		velocity.z = move_toward(velocity.z, 0.0, move_speed * 8.0 * delta)
+		if not is_on_floor():
+			velocity.y -= gravity * delta
+		else:
+			velocity.y = 0.0
+		_update_stun_pose()
+		_play(&"Lesha_idle")
+		move_and_slide()
+		if stun_remaining <= 0.0:
+			skeleton_model.rotation = stun_pose_base_rotation
+			skeleton_model.position = stun_pose_base_position
+		return
+
+	target = _get_preferred_target()
+	if target == null or not is_instance_valid(target):
+		velocity.x = move_toward(velocity.x, 0.0, move_speed)
+		velocity.z = move_toward(velocity.z, 0.0, move_speed)
+		if not is_on_floor():
+			velocity.y -= gravity * delta
+		move_and_slide()
+		return
+
+	attack_timer = maxf(attack_timer - delta, 0.0)
+	var target_center := _get_target_center()
+	var to_target := target_center - global_position
+	to_target.y = 0.0
+	var distance := to_target.length()
+	var facing_target := false
+	if distance > 0.05:
+		var desired_yaw := atan2(to_target.x, to_target.z)
+		rotation.y = rotate_toward(rotation.y, desired_yaw, turn_speed * delta)
+		facing_target = global_transform.basis.z.dot(to_target.normalized()) >= cos(deg_to_rad(attack_alignment_angle))
+
+	# Once a swing starts, finish the attack animation even if the player dashes
+	# out of range. Only an idle enemy should abandon pursuit for distance.
+	if distance > attack_range and not is_attacking:
+		is_attacking = false
+		var direction := to_target.normalized()
+		velocity.x = direction.x * move_speed
+		velocity.z = direction.z * move_speed
+		_play(&"Lesha_walk")
+	else:
+		velocity.x = move_toward(velocity.x, 0.0, move_speed * 4.0 * delta)
+		velocity.z = move_toward(velocity.z, 0.0, move_speed * 4.0 * delta)
+		if is_attacking:
+			_process_attack_hit()
+		if not is_attacking and attack_timer <= 0.0 and facing_target:
+			is_attacking = true
+			attack_has_hit = false
+			attack_timer = attack_cooldown
+			animation_player.speed_scale = attack_animation_speed_scale
+			if attack_sound != null:
+				attack_sound.play()
+			_play(&"Lesha_attack_1", true)
+		elif not is_attacking:
+			_play(&"Lesha_idle")
+
+	if not is_on_floor():
+		velocity.y -= gravity * delta
+	else:
+		velocity.y = 0.0
+	move_and_slide()
+
+func _play(animation_name: StringName, restart: bool = false) -> void:
+	if not animation_player.has_animation(animation_name):
+		return
+	if restart or current_animation != animation_name:
+		current_animation = animation_name
+		animation_player.play(animation_name, 0.1)
+
+func _on_animation_finished(animation_name: StringName) -> void:
+	if animation_name == &"Lesha_attack_1":
+		is_attacking = false
+		attack_has_hit = false
+		animation_player.speed_scale = 1.0
+		current_animation = &""
+
+
+func apply_stun(duration: float = -1.0) -> void:
+	var requested_duration := default_parry_stun_duration if duration < 0.0 else duration
+	stun_remaining = maxf(stun_remaining, requested_duration)
+	stun_pose_elapsed = 0.0
+	stun_pose_base_rotation = skeleton_model.rotation
+	stun_pose_base_position = skeleton_model.position
+	is_attacking = false
+	attack_has_hit = true
+	velocity.x = 0.0
+	velocity.z = 0.0
+	animation_player.speed_scale = 1.0
+	_play(&"Lesha_idle", true)
+
+
+func _update_stun_pose() -> void:
+	if skeleton_model == null:
+		return
+	var shake := sin(stun_pose_elapsed * 42.0) * 0.10
+	var sway := sin(stun_pose_elapsed * 19.0) * 0.16
+	var hands_up_recoil := sin(minf(stun_pose_elapsed * 8.0, PI * 0.5)) * 0.12
+	skeleton_model.rotation = stun_pose_base_rotation + Vector3(-hands_up_recoil + shake * 0.25, sway, shake)
+	skeleton_model.position = stun_pose_base_position + Vector3(shake * 0.06, abs(sin(stun_pose_elapsed * 24.0)) * 0.045, 0.0)
+
+
+## The player uses this instead of relying only on the damage callback. This
+## keeps parry timing attached to the attack animation while making the clash
+## reliable even when physics and animation advance on different frames.
+func is_attack_in_parry_window() -> bool:
+	if not is_attacking or attack_has_hit or current_animation != &"Lesha_attack_1":
+		return false
+	var attack_animation := animation_player.get_animation(&"Lesha_attack_1")
+	if attack_animation == null or attack_animation.length <= 0.0:
+		return false
+	var normalized_position := animation_player.current_animation_position / attack_animation.length
+	return normalized_position >= attack_hit_time - parry_contact_lead and normalized_position <= attack_hit_time + parry_contact_linger
+
+
+func take_damage(amount: float, _attacker: Node = null) -> bool:
+	if current_health <= 0.0 or amount <= 0.0:
+		return false
+	current_health = clampf(current_health - amount, 0.0, max_health)
+	if health_bar != null:
+		health_bar.value = current_health
+	health_changed.emit(current_health, max_health)
+	if current_health <= 0.0:
+		died.emit()
+		queue_free()
+	return true
+
+
+func _setup_health_bar() -> void:
+	health_bar_layer = CanvasLayer.new()
+	health_bar_layer.name = "EnemyHealthBarLayer"
+	add_child(health_bar_layer)
+	health_bar = ProgressBar.new()
+	health_bar.name = "EnemyHealthBar"
+	health_bar.show_percentage = false
+	health_bar.max_value = max_health
+	health_bar.value = current_health
+	health_bar.size = Vector2(110.0, 12.0)
+	var background := StyleBoxFlat.new()
+	background.bg_color = Color(0.04, 0.04, 0.05, 0.9)
+	background.corner_radius_top_left = 3
+	background.corner_radius_top_right = 3
+	background.corner_radius_bottom_left = 3
+	background.corner_radius_bottom_right = 3
+	var fill := StyleBoxFlat.new()
+	fill.bg_color = Color(0.75, 0.08, 0.1, 0.95)
+	fill.corner_radius_top_left = 3
+	fill.corner_radius_top_right = 3
+	fill.corner_radius_bottom_left = 3
+	fill.corner_radius_bottom_right = 3
+	health_bar.add_theme_stylebox_override("background", background)
+	health_bar.add_theme_stylebox_override("fill", fill)
+	health_bar_layer.add_child(health_bar)
+
+
+func _setup_attack_audio() -> void:
+	# Use a global player so the cue is always audible while debugging combat.
+	# The enemy's world-space hitbox remains separate from audio attenuation.
+	attack_sound = AudioStreamPlayer.new()
+	attack_sound.name = "AttackSound"
+	attack_sound.stream = attack_audio_stream
+	attack_sound.volume_db = 2.0
+	add_child(attack_sound)
+
+
+func _process(_delta: float) -> void:
+	_update_debug_hitboxes()
+	if health_bar == null:
+		return
+	var camera := get_viewport().get_camera_3d()
+	if camera == null:
+		health_bar.visible = false
+		return
+	var screen_position := camera.unproject_position(global_position + Vector3.UP * 2.2)
+	health_bar.position = screen_position - Vector2(55.0, 6.0)
+	health_bar.visible = not is_on_floor() or camera.is_position_in_frustum(global_position)
+
+
+func _setup_debug_hitboxes() -> void:
+	if not show_debug_hitboxes:
+		return
+
+	# Body hitbox: matches SkeletonEnemy/CollisionShape3D.
+	debug_body_mesh = MeshInstance3D.new()
+	debug_body_mesh.name = "DEBUG_BodyHitbox"
+	var body_capsule := CapsuleMesh.new()
+	body_capsule.radius = 0.35
+	body_capsule.height = 1.7
+	debug_body_mesh.mesh = body_capsule
+	debug_body_mesh.position = Vector3(0.0, 0.85, 0.0)
+	debug_body_material = _make_debug_material(Color(0.15, 0.55, 1.0, 0.18))
+	debug_body_mesh.material_override = debug_body_material
+	debug_body_mesh.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	add_child(debug_body_mesh)
+
+	# Attack hitbox: the same radius used by _process_attack_hit().
+	debug_attack_mesh = MeshInstance3D.new()
+	debug_attack_mesh.name = "DEBUG_AttackHitbox"
+	var attack_sphere := SphereMesh.new()
+	attack_sphere.radius = attack_range + attack_hit_range_padding
+	attack_sphere.height = (attack_range + attack_hit_range_padding) * 2.0
+	debug_attack_mesh.mesh = attack_sphere
+	debug_attack_material = _make_debug_material(Color(1.0, 0.18, 0.08, 0.07))
+	debug_attack_mesh.material_override = debug_attack_material
+	debug_attack_mesh.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	add_child(debug_attack_mesh)
+
+	# Ground ring makes the range readable even when the translucent sphere is
+	# hidden inside the character model.
+	debug_attack_ring = MeshInstance3D.new()
+	debug_attack_ring.name = "DEBUG_AttackRange"
+	var ring := TorusMesh.new()
+	ring.inner_radius = attack_range + attack_hit_range_padding - 0.035
+	ring.outer_radius = attack_range + attack_hit_range_padding + 0.035
+	debug_attack_ring.mesh = ring
+	debug_attack_ring.position = Vector3(0.0, 0.04, 0.0)
+	debug_attack_ring.material_override = debug_attack_material
+	debug_attack_ring.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	add_child(debug_attack_ring)
+
+	debug_state_label = Label3D.new()
+	debug_state_label.name = "DEBUG_AttackState"
+	debug_state_label.position = Vector3(0.0, 2.7, 0.0)
+	debug_state_label.billboard = BaseMaterial3D.BILLBOARD_ENABLED
+	debug_state_label.font_size = 32
+	debug_state_label.outline_size = 8
+	debug_state_label.modulate = Color.WHITE
+	add_child(debug_state_label)
+
+
+func _make_debug_material(color: Color) -> StandardMaterial3D:
+	var material := StandardMaterial3D.new()
+	material.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+	material.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+	material.albedo_color = color
+	material.emission_enabled = true
+	material.emission = Color(color.r, color.g, color.b, 1.0)
+	material.emission_energy_multiplier = 1.5
+	material.no_depth_test = true
+	return material
+
+
+func _update_debug_hitboxes() -> void:
+	if not show_debug_hitboxes or debug_attack_material == null:
+		return
+	var parryable := is_attack_in_parry_window()
+	var attack_color := Color(0.2, 1.0, 0.3, 0.28) if parryable else Color(1.0, 0.45, 0.08, 0.13) if is_attacking else Color(1.0, 0.18, 0.08, 0.07)
+	debug_attack_material.albedo_color = attack_color
+	debug_attack_material.emission = Color(attack_color.r, attack_color.g, attack_color.b, 1.0)
+	if debug_state_label != null:
+		if parryable:
+			debug_state_label.text = "PARRY NOW"
+			debug_state_label.modulate = Color(0.25, 1.0, 0.35, 1.0)
+		elif is_attacking:
+			debug_state_label.text = "ATTACK WINDUP"
+			debug_state_label.modulate = Color(1.0, 0.65, 0.15, 1.0)
+		else:
+			debug_state_label.text = "ATTACK RANGE"
+			debug_state_label.modulate = Color(1.0, 0.25, 0.15, 0.85)
+
+
+func _process_attack_hit() -> void:
+	if attack_has_hit or target == null or not is_instance_valid(target):
+		return
+	if animation_player.current_animation != &"Lesha_attack_1":
+		return
+	var attack_animation := animation_player.get_animation(&"Lesha_attack_1")
+	if attack_animation == null or attack_animation.length <= 0.0:
+		return
+	if animation_player.current_animation_position < attack_animation.length * attack_hit_time:
+		return
+	attack_has_hit = true
+	var distance := global_position.distance_to(_get_target_center())
+	if distance > attack_range + attack_hit_range_padding:
+		return
+	if target.has_method("take_damage"):
+		target.call("take_damage", attack_damage, self, "melee", {
+			"attack_name": "Skeleton Slash",
+			"direction": global_position.direction_to(_get_target_center())
+		})
+
+
+func _get_target_center() -> Vector3:
+	if target == null or not is_instance_valid(target):
+		return global_position
+	var target_collider := target.get_node_or_null("CollisionShape3D") as CollisionShape3D
+	if target_collider != null:
+		return target.to_global(target_collider.position)
+	return target.global_position + Vector3.UP * 0.9
+
+
+func _get_preferred_target() -> Node3D:
+	var newest_decoy: Node3D = null
+	var newest_priority := -INF
+	for candidate in get_tree().get_nodes_in_group("shadow_decoy"):
+		if not candidate is Node3D or not is_instance_valid(candidate):
+			continue
+		var decoy := candidate as Node3D
+		var priority := float(decoy.call("get_decoy_priority")) if decoy.has_method("get_decoy_priority") else 0.0
+		if newest_decoy == null or priority > newest_priority:
+			newest_decoy = decoy
+			newest_priority = priority
+	return newest_decoy if newest_decoy != null else player_target
