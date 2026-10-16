@@ -38,6 +38,7 @@ signal attack_pressed()
 @export var parry_window: float = 0.35               ## Total duration of parry window in seconds.
 @export var perfect_parry_window: float = 0.12       ## First portion of the window that triggers a Perfect Parry.
 @export var parry_cooldown: float = 0.45             ## Recovery cooldown incurred when a parry is missed/whiffed.
+@export var parry_max_angle: float = 75.0            ## Maximum angle (degrees) between facing direction and incoming attack to allow parrying.
 
 # --- Shadow Dash Configuration ---
 @export_group("Shadow Dash")
@@ -376,6 +377,35 @@ func _end_dash() -> void:
 	emit_signal("dash_finished")
 
 
+## Checks if the player is facing towards the incoming attack source within parry_max_angle degrees.
+func is_facing_attack(attacker: Node = null, attack_data: Dictionary = {}) -> bool:
+	var incoming_dir := Vector3.ZERO
+
+	if attack_data.has("direction") and attack_data["direction"] is Vector3:
+		# Attack direction trajectory vector: to face an attack travelling along V, face -V
+		incoming_dir = -attack_data["direction"]
+	elif attacker != null and attacker is Node3D:
+		incoming_dir = attacker.global_position - global_position
+	elif attack_data.has("origin") and attack_data["origin"] is Vector3:
+		incoming_dir = attack_data["origin"] - global_position
+	else:
+		# If no spatial direction or attacker position is specified, default to facing
+		return true
+
+	var forward := -visual_root.global_transform.basis.z
+	forward.y = 0.0
+	incoming_dir.y = 0.0
+
+	if incoming_dir.length_squared() < 0.001 or forward.length_squared() < 0.001:
+		return true
+
+	var forward_norm := forward.normalized()
+	var attack_norm := incoming_dir.normalized()
+	var dot := forward_norm.dot(attack_norm)
+	var min_dot := cos(deg_to_rad(parry_max_angle))
+	return dot >= min_dot
+
+
 # --- Damage & Combat Interface ---
 func take_damage(amount: float, attacker: Node = null, attack_type: String = "melee", attack_data: Dictionary = {}) -> bool:
 	if not is_alive:
@@ -386,8 +416,8 @@ func take_damage(amount: float, attacker: Node = null, attack_type: String = "me
 		emit_signal("damage_evaded", amount, attacker)
 		return false
 
-	# 2. Check Parry
-	if is_parrying:
+	# 2. Check Parry (only succeeds if facing the incoming attack)
+	if is_parrying and is_facing_attack(attacker, attack_data):
 		var is_perfect: bool = (parry_timer <= perfect_parry_window)
 		_end_parry(false)
 		

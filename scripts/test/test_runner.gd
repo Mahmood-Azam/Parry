@@ -80,6 +80,35 @@ func _init() -> void:
 	assert(results["normal_parry"] == true, "normal parry signal must be emitted")
 	print("  -> PASSED: Normal parry absorbed attack without damage and emitted signal.")
 
+	# Test 3c: Directional Parry - Attack from Behind Bypasses Parry
+	print("[TEST 3c] Testing Directional Parry (Attack from behind should bypass parry)...")
+	player.parry_cooldown_timer = 0.0
+	player.try_start_parry()
+	assert(player.is_parrying == true, "Parry started")
+	var attacker_behind := Node3D.new()
+	attacker_behind.position = player.global_position + Vector3(0, 0, 4.0) # Behind player
+	root.add_child(attacker_behind)
+	results["damaged"] = false
+	var behind_hit_result := player.take_damage(15.0, attacker_behind)
+	assert(behind_hit_result == true, "Attack from behind should deal damage even when parrying")
+	assert(results["damaged"] == true, "damaged signal should fire when attacked from behind")
+	assert(player.current_health == 60.0, "Health should decrease by 15 when attacked from behind")
+	attacker_behind.queue_free()
+	print("  -> PASSED: Attack from behind bypassed parry and dealt damage.")
+
+	# Test 3d: Directional Parry - Attack from Front Succeeds
+	print("[TEST 3d] Testing Directional Parry (Attack from front should be parried)...")
+	player.parry_cooldown_timer = 0.0
+	player.try_start_parry()
+	var attacker_front := Node3D.new()
+	attacker_front.position = player.global_position + Vector3(0, 0, -4.0) # In front of player
+	root.add_child(attacker_front)
+	var front_hit_result := player.take_damage(15.0, attacker_front)
+	assert(front_hit_result == false, "Attack from front should be parried")
+	assert(player.current_health == 60.0, "Health should not decrease when parrying front attack")
+	attacker_front.queue_free()
+	print("  -> PASSED: Attack from front was successfully parried.")
+
 	# Test 4: Shadow Dash & Invulnerability
 	print("[TEST 4] Testing Shadow Dash and Invulnerability...")
 	var dash_success := player.try_start_dash()
@@ -91,7 +120,7 @@ func _init() -> void:
 	# Attack player while dashing
 	var dash_hit_result := player.take_damage(40.0)
 	assert(dash_hit_result == false, "take_damage should return false while invulnerable")
-	assert(player.current_health == 75.0, "No damage should be taken during dash")
+	assert(player.current_health == 60.0, "No damage should be taken during dash")
 	assert(results["evaded"] == true, "damage_evaded signal must be emitted")
 	print("  -> PASSED: Shadow dash evaded incoming strike cleanly.")
 

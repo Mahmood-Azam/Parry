@@ -28,6 +28,11 @@ player.take_damage(amount: float, attacker: Node = null, attack_type: String = "
 - `false`: Attack was **parried** or **evaded** (no health lost).
 - `true`: Damage was **applied** to player's health.
 
+### Directional Parry Rule
+- Parrying is directional: the player must face towards the incoming attack source within `parry_max_angle` (default: **75°**, creating a 150° forward protection arc).
+- Attacks from behind or the rear flanks bypass parry and deal full damage to the player.
+- For projectiles (arrows), pass `attack_data = {"direction": projectile_velocity.normalized()}` or `attacker` node.
+
 ---
 
 ## 3. Player Signals (For Dev 2 Heat & Dev 4 UI)
