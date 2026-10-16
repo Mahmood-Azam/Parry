@@ -1,0 +1,48 @@
+[gd_resource type="ShaderMaterial" format=3]
+
+[ext_resource type="Shader" path="res://Shaders/EA_GrassWind.gdshader" id="1_w3a8s"]
+[ext_resource type="Texture2D" path="res://Textures/Grass_Texture.png" id="2_ixsa4"]
+
+[resource]
+resource_name = "EA_Grass_Card"
+render_priority = 0
+shader = ExtResource("1_w3a8s")
+shader_parameter/albedo_texture = ExtResource("2_ixsa4")
+shader_parameter/base_color = Color(0.717, 0.717, 0.717, 1)
+shader_parameter/alpha_cutoff = 0.45
+shader_parameter/normal_strength = 1.0
+shader_parameter/smoothness = 0.0
+shader_parameter/metallic = 0.148
+shader_parameter/wind_strength = 0.08
+shader_parameter/wind_speed = 1.0
+shader_parameter/wind_frequency = 0.8
+shader_parameter/wind_direction_x = 1.0
+shader_parameter/wind_direction_z = 0.15
+shader_parameter/anchor_height = 0.52
+shader_parameter/gust_use_texture = false
+shader_parameter/gust_strength = 0.5
+shader_parameter/gust_scale = 0.05
+shader_parameter/gust_speed = 0.4
+shader_parameter/tint_color_small = Color(1, 0.87, 0.45, 1)
+shader_parameter/stripes_mode_small = false
+shader_parameter/tint_scale_small_blob = 0.814
+shader_parameter/tint_intensity_small_blob = 0.35
+shader_parameter/tint_width_small_blob = 0.867
+shader_parameter/tint_speed_small_blob = 0.806
+shader_parameter/tint_scale_small_stripes = null
+shader_parameter/tint_intensity_small_stripes = null
+shader_parameter/tint_width_small_stripes = null
+shader_parameter/tint_speed_small_stripes = null
+shader_parameter/tint_color_large = Color(0.62, 0.83, 0.55, 1)
+shader_parameter/stripes_mode_large = true
+shader_parameter/tint_scale_large_blob = null
+shader_parameter/tint_intensity_large_blob = null
+shader_parameter/tint_width_large_blob = null
+shader_parameter/tint_speed_large_blob = null
+shader_parameter/tint_scale_large_stripes = 0.265
+shader_parameter/tint_intensity_large_stripes = 0.45
+shader_parameter/tint_width_large_stripes = 0.846
+shader_parameter/tint_speed_large_stripes = 0.534
+shader_parameter/ambient_lift = 0.25
+shader_parameter/ambient_tint = Color(0.55, 0.7, 0.55, 1)
+shader_parameter/normal_up_bias = 0.5

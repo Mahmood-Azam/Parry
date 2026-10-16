@@ -1,0 +1,71 @@
+CONTENTS -- Slavic World Free
+Maciej EmacArt
+================================================================
+
+OBJECT SCENES (total: 238)
+  Prefabs (5)
+  Prefabs/Compound/Balcony (1)
+  Prefabs/Compound/Foundation (1)
+  Prefabs/Compound/Porch (1)
+  Prefabs/Compound/Roofs (10)
+  Prefabs/Compound/Walls (8)
+  Prefabs/Compound/Walls_Painted (3)
+  Prefabs/Environment (3)
+  Prefabs/Environment/Bridge (2)
+  Prefabs/Environment/Moss (1)
+  Prefabs/Environment/Mud (5)
+  Prefabs/Environment/Road (5)
+  Prefabs/Environment/RoadIsland (5)
+  Prefabs/Environment/RoadSide (1)
+  Prefabs/Environment/Rock (12)
+  Prefabs/Environment/Sand (6)
+  Prefabs/Environment/Stairs (1)
+  Prefabs/Fence/Cobble (3)
+  Prefabs/Fence/Plank2 (5)
+  Prefabs/Fence/RockGate (1)
+  Prefabs/Fence/SolidBeam (1)
+  Prefabs/Fence/VegetablePatch (1)
+  Prefabs/Fence/Wall (3)
+  Prefabs/Fence/rockDesk (2)
+  Prefabs/Items/Crockery (23)
+  Prefabs/Items/Food (1)
+  Prefabs/Items/House (6)
+  Prefabs/Items/Tool (1)
+  Prefabs/Nature/Bushes (14)
+  Prefabs/Nature/Grass (4)
+  Prefabs/Nature/Plant (9)
+  Prefabs/Nature/Tree (7)
+  Prefabs/Prop (8)
+  Prefabs/Prop/Carpentry (3)
+  Prefabs/Prop/Container (14)
+  Prefabs/Prop/Forester (2)
+  Prefabs/Prop/Furniture (14)
+  Prefabs/Prop/Hunter (3)
+  Prefabs/Prop/Sign (1)
+  Prefabs/Prop/Village (4)
+  Prefabs/Prop/wooden (5)
+  Prefabs/RiverStraight (4)
+  Prefabs/Terrain/Field (2)
+  Prefabs/Town/Administrative (3)
+  Prefabs/Town/Building (5)
+  Prefabs/Town/Compound/Walls_Painted (2)
+  Prefabs/Village/Building/Compound/Walls (1)
+  Prefabs/Village/Building/Other (5)
+  Prefabs/Village/Building/Porch (1)
+  Prefabs/Village/Building/Shed (1)
+  Prefabs/Village/Elements (5)
+  Prefabs/Village/OutBuilding (3)
+  Prefabs/Village/Village/AnimalBreeding (1)
+
+ASSETS
+  Textures:      7
+  Meshes:        635
+  Source FBX:    213
+  Materials:     234 (+ 4 .tres)
+  Shaders:       3
+  Demo scenes:   3
+  Terrain scenes: 2
+
+TOTAL FILES IN PACK: 1587
+
+================================================================

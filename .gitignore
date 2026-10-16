@@ -1,24 +1,3 @@
-# Godot 4.x gitignore
+# Godot 4+ specific ignores
 .godot/
-*.translation
-
-# Export templates and binaries
-bin/
-build/
-*.apk
-*.aab
-*.exe
-*.o
-*.so
-*.dylib
-
-# Mono/C# specific (if ever used)
-.mono/
-[Gg]odot[Ss]harp/
-*.csproj
-*.sln
-
-# OS generated
-.DS_Store
-Thumbs.db
-desktop.ini
+/android/

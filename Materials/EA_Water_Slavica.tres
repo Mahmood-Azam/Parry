@@ -1,0 +1,45 @@
+[gd_resource type="ShaderMaterial" format=3]
+
+[ext_resource type="Shader" path="res://Shaders/EA_Water.gdshader" id="1_v63xl"]
+[ext_resource type="Texture2D" path="res://Textures/EA_Water_Normal.tres" id="2_oycmk"]
+
+[resource]
+resource_name = "EA_Water_Slavica"
+render_priority = 0
+shader = ExtResource("1_v63xl")
+shader_parameter/shallow_color = Color(0.4, 0.66, 0.56, 0.72)
+shader_parameter/deep_color = Color(0.09, 0.26, 0.28, 0.96)
+shader_parameter/water_depth = 1.6
+shader_parameter/color_bands = 3
+shader_parameter/shore_glow_color = Color(0.78, 0.92, 0.9, 1)
+shader_parameter/shore_glow_width = 0.14
+shader_parameter/specular_color = Color(1, 1, 1, 1)
+shader_parameter/specular_size = 26.0
+shader_parameter/specular_softness = 0.08
+shader_parameter/specular_hardness = 0.85
+shader_parameter/specular_intensity = 0.3
+shader_parameter/fresnel_power = 2.9
+shader_parameter/refraction_strength = 0.025
+shader_parameter/foam_style = 4
+shader_parameter/foam_color = Color(0.96, 0.98, 0.97, 1)
+shader_parameter/foam_tiling = 0.035
+shader_parameter/foam_cutoff = 0.24
+shader_parameter/foam_depth = 0.28
+shader_parameter/foam_speed = 0.22
+shader_parameter/foam_edge_break = 0.7
+shader_parameter/shore_edge_break = 0.28
+shader_parameter/foam_hardness = 0.85
+shader_parameter/foam_overlay = 0.0
+shader_parameter/caustics_tint = Color(0.88, 1, 0.92, 1)
+shader_parameter/caustics_strength = 0.22
+shader_parameter/caustics_scale = 0.05
+shader_parameter/caustics_speed = 0.35
+shader_parameter/chromatic_aberration = true
+shader_parameter/sparkle_boost = 0.2
+shader_parameter/sparkle_density = 0.3
+shader_parameter/sparkle_size = 0.22
+shader_parameter/normal_map = ExtResource("2_oycmk")
+shader_parameter/normal_tiling = 0.06
+shader_parameter/normal_strength = 0.9
+shader_parameter/wave_speed = 0.03
+shader_parameter/wave_height = 0.0

@@ -1,0 +1,34 @@
+================================================================
+  EmacEArt Asset License
+  Maciej EmacArt -- 3D Assets
+================================================================
+
+Copyright (c) 2026 Maciej EmacArt
+
+Free for personal and commercial use, but resale or redistribution
+of the assets as standalone files or asset packs is prohibited.
+No credit is required, though it is always welcome.
+
+----------------------------------------------------------------
+  YOU MAY
+----------------------------------------------------------------
+  - Use these assets in personal and commercial projects
+  - Modify and adapt them for your own project
+  - Ship them as part of a game or application you build
+
+----------------------------------------------------------------
+  YOU MAY NOT
+----------------------------------------------------------------
+  - Sell the assets themselves, on their own or inside another
+    asset pack
+  - Redistribute them as standalone files, free or paid
+
+----------------------------------------------------------------
+  CONTACT
+----------------------------------------------------------------
+  Maciej EmacArt
+  Website: emaceart.dev
+  Discord: https://discord.com/invite/ctXaf5Ftqw
+
+THE ASSETS ARE PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND.
+================================================================
