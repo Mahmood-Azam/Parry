@@ -1,4 +1,4 @@
-[gd_scene load_steps=24 format=3 uid="uid://b8player0001"]
+[gd_scene load_steps=25 format=3 uid="uid://b8player0001"]
 
 [ext_resource type="Script" path="res://scripts/player/player.gd" id="1_player"]
 
@@ -241,6 +241,9 @@ _data = {
 &"parry_stance": SubResource("Animation_parry")
 }
 
+[sub_resource type="SphereShape3D" id="SphereShape3D_arm"]
+radius = 0.2
+
 [node name="Player" type="CharacterBody3D" groups=["player"]]
 collision_layer = 2
 collision_mask = 1
@@ -305,14 +308,16 @@ libraries = {
 }
 
 [node name="CameraPivot" type="Node3D" parent="."]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.5, 0)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.45, 1.7, 0)
 
 [node name="SpringArm3D" type="SpringArm3D" parent="CameraPivot"]
 transform = Transform3D(1, 0, 0, 0, 0.965926, 0.258819, 0, -0.258819, 0.965926, 0, 0, 0)
 collision_mask = 1
-spring_length = 3.5
+shape = SubResource("SphereShape3D_arm")
+spring_length = 4.5
 margin = 0.2
 
 [node name="Camera3D" type="Camera3D" parent="CameraPivot/SpringArm3D"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 4.5)
 current = true
-fov = 75.0
+fov = 70.0

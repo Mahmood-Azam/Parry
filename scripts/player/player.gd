@@ -49,8 +49,9 @@ signal attack_pressed()
 # --- Camera & Look Configuration ---
 @export_group("Camera")
 @export var mouse_sensitivity: float = 0.0025
-@export var min_pitch: float = -75.0
-@export var max_pitch: float = 55.0
+@export var camera_distance: float = 4.5             ## Third-person camera distance behind player.
+@export var min_pitch: float = -65.0                 ## Maximum look down angle in degrees.
+@export var max_pitch: float = 45.0                  ## Maximum look up angle in degrees.
 
 # --- Node References ---
 @onready var visual_root: Node3D = $Visuals
@@ -88,7 +89,6 @@ var dash_direction: Vector3 = Vector3.FORWARD
 
 # Camera screen shake
 var camera_trauma: float = 0.0
-var _initial_cam_pos: Vector3 = Vector3.ZERO
 
 # Visual feedback
 var _original_material: StandardMaterial3D
@@ -102,8 +102,8 @@ func _ready() -> void:
 	# Setup mouse capture
 	Input.set_mouse_mode(Input.MOUSE_MODE_CAPTURED)
 	
-	if camera:
-		_initial_cam_pos = camera.position
+	if spring_arm:
+		spring_arm.spring_length = camera_distance
 		
 	if parry_aura:
 		parry_aura.visible = false
@@ -137,6 +137,15 @@ func _unhandled_input(event: InputEvent) -> void:
 	# Camera rotation
 	if event is InputEventMouseMotion and Input.get_mouse_mode() == Input.MOUSE_MODE_CAPTURED:
 		_handle_camera_rotation(event.relative)
+	elif event is InputEventMouseButton and event.pressed:
+		if event.button_index == MOUSE_BUTTON_WHEEL_UP:
+			camera_distance = clamp(camera_distance - 0.35, 2.2, 7.0)
+			if spring_arm:
+				spring_arm.spring_length = camera_distance
+		elif event.button_index == MOUSE_BUTTON_WHEEL_DOWN:
+			camera_distance = clamp(camera_distance + 0.35, 2.2, 7.0)
+			if spring_arm:
+				spring_arm.spring_length = camera_distance
 
 	# Action inputs
 	if event.is_action_pressed("parry"):
@@ -252,14 +261,12 @@ func _process_screen_shake(delta: float) -> void:
 		return
 	if camera_trauma > 0.0:
 		camera_trauma = max(0.0, camera_trauma - delta * 3.5)
-		var shake := camera_trauma * camera_trauma * 0.16
-		camera.position = _initial_cam_pos + Vector3(
-			randf_range(-shake, shake),
-			randf_range(-shake, shake),
-			0.0
-		)
+		var shake := camera_trauma * camera_trauma * 0.18
+		camera.h_offset = randf_range(-shake, shake)
+		camera.v_offset = randf_range(-shake, shake)
 	else:
-		camera.position = _initial_cam_pos
+		camera.h_offset = 0.0
+		camera.v_offset = 0.0
 
 
 # --- Attack Combo Mechanics ---
