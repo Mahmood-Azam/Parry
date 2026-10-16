@@ -1,0 +1,323 @@
+[gd_scene load_steps=25 format=3 uid="uid://b8player0001"]
+
+[ext_resource type="Script" path="res://scripts/player/player.gd" id="1_player"]
+
+[sub_resource type="CapsuleShape3D" id="CapsuleShape3D_player"]
+radius = 0.4
+height = 1.8
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_body"]
+albedo_color = Color(0.18, 0.2, 0.24, 1)
+metallic = 0.4
+roughness = 0.6
+
+[sub_resource type="CapsuleMesh" id="CapsuleMesh_body"]
+material = SubResource("StandardMaterial3D_body")
+radius = 0.4
+height = 1.8
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_visor"]
+albedo_color = Color(0.1, 0.5, 0.8, 1)
+emission_enabled = true
+emission = Color(0.2, 0.6, 1, 1)
+emission_energy_multiplier = 2.0
+
+[sub_resource type="BoxMesh" id="BoxMesh_visor"]
+material = SubResource("StandardMaterial3D_visor")
+size = Vector3(0.28, 0.12, 0.2)
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_sword"]
+albedo_color = Color(0.75, 0.75, 0.78, 1)
+metallic = 0.85
+roughness = 0.25
+
+[sub_resource type="BoxMesh" id="BoxMesh_sword"]
+material = SubResource("StandardMaterial3D_sword")
+size = Vector3(0.08, 1.1, 0.15)
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_aura"]
+transparency = 1
+albedo_color = Color(0.2, 0.6, 1, 0.35)
+emission_enabled = true
+emission = Color(0.2, 0.6, 1, 1)
+emission_energy_multiplier = 1.5
+
+[sub_resource type="SphereMesh" id="SphereMesh_aura"]
+material = SubResource("StandardMaterial3D_aura")
+radius = 1.1
+height = 2.2
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_slash"]
+transparency = 1
+blend_mode = 1
+shading_mode = 0
+albedo_color = Color(1, 0.85, 0.4, 0.8)
+
+[sub_resource type="TorusMesh" id="TorusMesh_slash"]
+material = SubResource("StandardMaterial3D_slash")
+inner_radius = 0.95
+outer_radius = 1.2
+rings = 16
+ring_segments = 8
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_spark"]
+transparency = 1
+blend_mode = 1
+shading_mode = 0
+albedo_color = Color(1, 0.8, 0.2, 1)
+
+[sub_resource type="BoxMesh" id="BoxMesh_spark"]
+material = SubResource("StandardMaterial3D_spark")
+size = Vector3(0.04, 0.04, 0.14)
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_shockwave"]
+transparency = 1
+blend_mode = 1
+shading_mode = 0
+albedo_color = Color(0.3, 0.85, 1, 0.85)
+
+[sub_resource type="TorusMesh" id="TorusMesh_shockwave"]
+material = SubResource("StandardMaterial3D_shockwave")
+inner_radius = 0.8
+outer_radius = 0.95
+rings = 24
+ring_segments = 12
+
+[sub_resource type="Animation" id="Animation_attack1"]
+resource_name = "attack_1"
+length = 0.32
+step = 0.02
+tracks/0/type = "value"
+tracks/0/imported = false
+tracks/0/enabled = true
+tracks/0/path = NodePath("Visuals/SwordMesh:position")
+tracks/0/interp = 1
+tracks/0/loop_wrap = true
+tracks/0/keys = {
+"times": PackedFloat32Array(0, 0.06, 0.16, 0.32),
+"transitions": PackedFloat32Array(0.5, 0.3, 1, 1),
+"update": 0,
+"values": [Vector3(0.52, 0.7, -0.15), Vector3(0.4, 0.9, 0.15), Vector3(-0.4, 0.65, -0.55), Vector3(0.52, 0.7, -0.15)]
+}
+tracks/1/type = "value"
+tracks/1/imported = false
+tracks/1/enabled = true
+tracks/1/path = NodePath("Visuals/SwordMesh:rotation")
+tracks/1/interp = 1
+tracks/1/loop_wrap = true
+tracks/1/keys = {
+"times": PackedFloat32Array(0, 0.06, 0.16, 0.32),
+"transitions": PackedFloat32Array(0.5, 0.3, 1, 1),
+"update": 0,
+"values": [Vector3(0, 0, 0.261799), Vector3(-0.35, 0.7, 0.8), Vector3(0.3, -1.2, -0.6), Vector3(0, 0, 0.261799)]
+}
+tracks/2/type = "value"
+tracks/2/imported = false
+tracks/2/enabled = true
+tracks/2/path = NodePath("Visuals/SlashArc:visible")
+tracks/2/interp = 1
+tracks/2/loop_wrap = true
+tracks/2/keys = {
+"times": PackedFloat32Array(0, 0.06, 0.22),
+"transitions": PackedFloat32Array(1, 1, 1),
+"update": 1,
+"values": [false, true, false]
+}
+
+[sub_resource type="Animation" id="Animation_attack2"]
+resource_name = "attack_2"
+length = 0.32
+step = 0.02
+tracks/0/type = "value"
+tracks/0/imported = false
+tracks/0/enabled = true
+tracks/0/path = NodePath("Visuals/SwordMesh:position")
+tracks/0/interp = 1
+tracks/0/loop_wrap = true
+tracks/0/keys = {
+"times": PackedFloat32Array(0, 0.06, 0.16, 0.32),
+"transitions": PackedFloat32Array(0.5, 0.3, 1, 1),
+"update": 0,
+"values": [Vector3(0.52, 0.7, -0.15), Vector3(-0.35, 0.5, -0.2), Vector3(0.45, 1.05, -0.5), Vector3(0.52, 0.7, -0.15)]
+}
+tracks/1/type = "value"
+tracks/1/imported = false
+tracks/1/enabled = true
+tracks/1/path = NodePath("Visuals/SwordMesh:rotation")
+tracks/1/interp = 1
+tracks/1/loop_wrap = true
+tracks/1/keys = {
+"times": PackedFloat32Array(0, 0.06, 0.16, 0.32),
+"transitions": PackedFloat32Array(0.5, 0.3, 1, 1),
+"update": 0,
+"values": [Vector3(0, 0, 0.261799), Vector3(0.4, -0.8, -0.5), Vector3(-0.5, 0.9, 0.8), Vector3(0, 0, 0.261799)]
+}
+tracks/2/type = "value"
+tracks/2/imported = false
+tracks/2/enabled = true
+tracks/2/path = NodePath("Visuals/SlashArc:visible")
+tracks/2/interp = 1
+tracks/2/loop_wrap = true
+tracks/2/keys = {
+"times": PackedFloat32Array(0, 0.06, 0.22),
+"transitions": PackedFloat32Array(1, 1, 1),
+"update": 1,
+"values": [false, true, false]
+}
+
+[sub_resource type="Animation" id="Animation_parry"]
+resource_name = "parry_stance"
+length = 0.25
+tracks/0/type = "value"
+tracks/0/imported = false
+tracks/0/enabled = true
+tracks/0/path = NodePath("Visuals/SwordMesh:position")
+tracks/0/interp = 1
+tracks/0/loop_wrap = true
+tracks/0/keys = {
+"times": PackedFloat32Array(0, 0.05),
+"transitions": PackedFloat32Array(0.3, 1),
+"update": 0,
+"values": [Vector3(0.52, 0.7, -0.15), Vector3(0.05, 0.95, -0.38)]
+}
+tracks/1/type = "value"
+tracks/1/imported = false
+tracks/1/enabled = true
+tracks/1/path = NodePath("Visuals/SwordMesh:rotation")
+tracks/1/interp = 1
+tracks/1/loop_wrap = true
+tracks/1/keys = {
+"times": PackedFloat32Array(0, 0.05),
+"transitions": PackedFloat32Array(0.3, 1),
+"update": 0,
+"values": [Vector3(0, 0, 0.261799), Vector3(0.35, 0.65, 1.1)]
+}
+
+[sub_resource type="Animation" id="Animation_reset"]
+resource_name = "RESET"
+length = 0.001
+tracks/0/type = "value"
+tracks/0/imported = false
+tracks/0/enabled = true
+tracks/0/path = NodePath("Visuals/SwordMesh:position")
+tracks/0/interp = 1
+tracks/0/loop_wrap = true
+tracks/0/keys = {
+"times": PackedFloat32Array(0),
+"transitions": PackedFloat32Array(1),
+"update": 0,
+"values": [Vector3(0.52, 0.7, -0.15)]
+}
+tracks/1/type = "value"
+tracks/1/imported = false
+tracks/1/enabled = true
+tracks/1/path = NodePath("Visuals/SwordMesh:rotation")
+tracks/1/interp = 1
+tracks/1/loop_wrap = true
+tracks/1/keys = {
+"times": PackedFloat32Array(0),
+"transitions": PackedFloat32Array(1),
+"update": 0,
+"values": [Vector3(0, 0, 0.261799)]
+}
+tracks/2/type = "value"
+tracks/2/imported = false
+tracks/2/enabled = true
+tracks/2/path = NodePath("Visuals/SlashArc:visible")
+tracks/2/interp = 1
+tracks/2/loop_wrap = true
+tracks/2/keys = {
+"times": PackedFloat32Array(0),
+"transitions": PackedFloat32Array(1),
+"update": 1,
+"values": [false]
+}
+
+[sub_resource type="AnimationLibrary" id="AnimationLibrary_player"]
+_data = {
+&"RESET": SubResource("Animation_reset"),
+&"attack_1": SubResource("Animation_attack1"),
+&"attack_2": SubResource("Animation_attack2"),
+&"parry_stance": SubResource("Animation_parry")
+}
+
+[sub_resource type="SphereShape3D" id="SphereShape3D_arm"]
+radius = 0.2
+
+[node name="Player" type="CharacterBody3D" groups=["player"]]
+collision_layer = 2
+collision_mask = 1
+script = ExtResource("1_player")
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.9, 0)
+shape = SubResource("CapsuleShape3D_player")
+
+[node name="Visuals" type="Node3D" parent="."]
+
+[node name="CharacterMesh" type="MeshInstance3D" parent="Visuals"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.9, 0)
+mesh = SubResource("CapsuleMesh_body")
+
+[node name="HeadVisor" type="MeshInstance3D" parent="Visuals"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.45, -0.32)
+mesh = SubResource("BoxMesh_visor")
+
+[node name="SwordMesh" type="MeshInstance3D" parent="Visuals"]
+transform = Transform3D(0.965926, -0.258819, 0, 0.258819, 0.965926, 0, 0, 0, 1, 0.52, 0.7, -0.15)
+mesh = SubResource("BoxMesh_sword")
+
+[node name="SlashArc" type="MeshInstance3D" parent="Visuals"]
+transform = Transform3D(0.866025, 0, 0.5, 0, 1, 0, -0.5, 0, 0.866025, 0, 0.85, -0.5)
+visible = false
+mesh = SubResource("TorusMesh_slash")
+
+[node name="ParryAura" type="MeshInstance3D" parent="Visuals"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.9, 0)
+visible = false
+mesh = SubResource("SphereMesh_aura")
+
+[node name="ClashSparks" type="CPUParticles3D" parent="Visuals"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.05, 0.95, -0.55)
+emitting = false
+amount = 28
+lifetime = 0.35
+one_shot = true
+explosiveness = 0.95
+mesh = SubResource("BoxMesh_spark")
+direction = Vector3(0, 0.8, -1)
+spread = 65.0
+gravity = Vector3(0, -12, 0)
+initial_velocity_min = 6.0
+initial_velocity_max = 12.0
+
+[node name="ClashLight" type="OmniLight3D" parent="Visuals"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.05, 0.95, -0.55)
+light_color = Color(1, 0.85, 0.4, 1)
+light_energy = 0.0
+omni_range = 6.0
+
+[node name="ParryShockwave" type="MeshInstance3D" parent="Visuals"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.05, 0.95, -0.55)
+visible = false
+mesh = SubResource("TorusMesh_shockwave")
+
+[node name="AnimationPlayer" type="AnimationPlayer" parent="."]
+libraries = {
+&"": SubResource("AnimationLibrary_player")
+}
+
+[node name="CameraPivot" type="Node3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.45, 1.7, 0)
+
+[node name="SpringArm3D" type="SpringArm3D" parent="CameraPivot"]
+transform = Transform3D(1, 0, 0, 0, 0.965926, 0.258819, 0, -0.258819, 0.965926, 0, 0, 0)
+collision_mask = 1
+shape = SubResource("SphereShape3D_arm")
+spring_length = 4.5
+margin = 0.2
+
+[node name="Camera3D" type="Camera3D" parent="CameraPivot/SpringArm3D"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 4.5)
+current = true
+fov = 70.0

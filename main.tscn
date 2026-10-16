@@ -1,9 +1,9 @@
-[gd_scene format=3 uid="uid://r2njidlucb2b"]
+[gd_scene format=3]
 
-[ext_resource type="Script" uid="uid://cyo82268pkh3d" path="res://player_controller.gd" id="1_0xm2m"]
-[ext_resource type="PackedScene" uid="uid://cg8k1iw5i4nie" path="res://assets/animations/Lite Sword and Shield Pack/Knight D Pelegrini.fbx" id="2_1bvp3"]
-[ext_resource type="Script" uid="uid://k7nth4aql120" path="res://assets/enemies/skeleton/skeleton_enemy.gd" id="3_1bvp3"]
-[ext_resource type="PackedScene" uid="uid://dykbeg0d70quw" path="res://assets/enemies/skeleton/skeleton_-_low_tier_enemy.glb" id="4_lquwl"]
+[ext_resource type="Script" path="res://player_controller.gd" id="1_0xm2m"]
+[ext_resource type="PackedScene" path="res://assets/animations/Lite Sword and Shield Pack/Knight D Pelegrini.fbx" id="2_1bvp3"]
+[ext_resource type="Script" path="res://assets/enemies/skeleton/skeleton_enemy.gd" id="3_1bvp3"]
+[ext_resource type="PackedScene" path="res://assets/enemies/skeleton/skeleton_-_low_tier_enemy.glb" id="4_lquwl"]
 
 [sub_resource type="BoxShape3D" id="BoxShape3D_0xm2m"]
 size = Vector3(40, 0.5, 40)
