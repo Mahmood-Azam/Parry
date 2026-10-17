@@ -28,6 +28,7 @@ const CONTACT_IMPACT = preload("res://combat_impact.gd")
 const HIT_PAUSE = preload("res://combat_hit_pause.gd")
 const SWORD_TRAIL_SCRIPT = preload("res://sword_trail.gd")
 const GROUNDING_SCRIPT = preload("res://locomotion_grounding.gd")
+const FOOTSTEP_STREAMS = [preload("res://assets/audio/footstep_stone_01.wav"), preload("res://assets/audio/footstep_stone_02.wav")]
 const FLAME_AURA_SCRIPT = preload("res://flame_aura.gd")
 const CHARGE_AURA_SCRIPT = preload("res://charge_energy_aura.gd")
 const ULTIMATE_SCRIPT = preload("res://ultimate_controller.gd")
@@ -175,6 +176,8 @@ var parry_flash: ColorRect
 var hit_flash: ColorRect
 var parry_sound: AudioStreamPlayer
 var sword_swing_sound: AudioStreamPlayer
+var footstep_sounds: Array[AudioStreamPlayer] = []
+var jump_sound: AudioStreamPlayer
 var attack_phase_sound := 0
 var parry_debug_ring: MeshInstance3D
 var parry_debug_material: StandardMaterial3D
@@ -259,6 +262,7 @@ func _ready() -> void:
 	_setup_combat_feedback()
 	_setup_parry_audio()
 	_setup_sword_audio()
+	_setup_movement_audio()
 	_setup_combat_stats()
 	ultimate_controller = ULTIMATE_SCRIPT.new()
 	ultimate_controller.name = "UltimateController"
@@ -389,6 +393,31 @@ func _setup_sword_audio() -> void:
 	sword_swing_sound.volume_db = 3.0
 	sword_swing_sound.max_polyphony = 3
 	add_child(sword_swing_sound)
+
+
+func _setup_movement_audio() -> void:
+	for stream in FOOTSTEP_STREAMS:
+		var step := AudioStreamPlayer.new()
+		step.name = "FootstepSound%d" % footstep_sounds.size()
+		step.stream = stream
+		step.volume_db = -12.0
+		add_child(step)
+		footstep_sounds.append(step)
+	jump_sound = AudioStreamPlayer.new()
+	jump_sound.name = "JumpSound"
+	jump_sound.stream = preload("res://assets/audio/jump_takeoff.wav")
+	jump_sound.volume_db = -10.0
+	add_child(jump_sound)
+
+
+func _play_footstep(landing: bool = false) -> void:
+	if footstep_sounds.is_empty():
+		return
+	var step := footstep_sounds[1 if motion_fx_left_foot else 0]
+	var running := Vector2(velocity.x, velocity.z).length() > walk_speed
+	step.volume_db = -7.0 if landing else (-10.0 if running else -14.0)
+	step.pitch_scale = (0.83 if landing else 1.0) + randf_range(-0.05, 0.05)
+	step.play()
 
 func _play_sword_swing() -> void:
 	# A little variation keeps the supplied single sample from sounding mechanical.
@@ -949,6 +978,8 @@ func _physics_process(delta: float) -> void:
 		animation_player.speed_scale = jump_animation_speed_scale
 		last_animation = ""
 		_play("Jump")
+		jump_sound.pitch_scale = randf_range(0.96, 1.04)
+		jump_sound.play()
 
 	if is_dashing:
 		dash_elapsed += delta
@@ -1024,6 +1055,8 @@ func _physics_process(delta: float) -> void:
 	if Input.is_action_just_pressed("jump_attack") and not attacking and not blocking and not is_dashing:
 		_begin_attack("JumpAttack")
 		velocity.y = jump_velocity
+		jump_sound.pitch_scale = 0.9
+		jump_sound.play()
 	elif attack_pressed and not attacking and not blocking and not is_dashing:
 		_begin_attack("Attack")
 
@@ -1569,6 +1602,7 @@ func _update_motion_effects(delta: float) -> void:
 		return
 	if grounded and not motion_fx_grounded and motion_fx_vertical_speed < -1.5:
 		COMBAT_FX.burst(get_tree().current_scene, global_position + Vector3.UP * 0.04, Color(0.5, 0.45, 0.38, 0.55), 16, 0.9, true)
+		_play_footstep(true)
 	motion_fx_grounded = grounded
 	motion_fx_vertical_speed = velocity.y
 	if is_dashing:
@@ -1595,6 +1629,7 @@ func _update_motion_effects(delta: float) -> void:
 		foot_position = skeleton.to_global(skeleton.get_bone_global_pose(foot_index).origin)
 	foot_position.y = global_position.y + 0.035
 	COMBAT_FX.burst(get_tree().current_scene, foot_position, Color(0.46, 0.42, 0.36, 0.5), 6, 0.5, true)
+	_play_footstep()
 
 
 func _update_locomotion_pose(delta: float, moving: bool, sprinting: bool) -> void:

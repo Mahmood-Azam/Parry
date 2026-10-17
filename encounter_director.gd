@@ -479,6 +479,8 @@ func _place_mutant() -> void:
 	mutant.engaged_player.connect(_update_hud)
 	get_parent().add_child(mutant)
 	mutant.health_bar.hide()
+	if is_instance_valid(player):
+		player._add_camera_trauma(0.75)
 	_set_marker(mutant.global_position, "DEFEAT THE MUTANT")
 
 func _mutant_defeated() -> void:
