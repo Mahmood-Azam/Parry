@@ -48,7 +48,7 @@ func run() -> void:
 	root.add_child(scene)
 	current_scene = scene
 	scene._show_options()
-	var checkbox := scene.options_panel.get_node("Margin/VBox/DisplaySettingsControls/Fullscreen") as CheckButton
+	var checkbox := scene.options_panel.find_child("Fullscreen", true, false) as CheckButton
 	checkbox.grab_focus()
 	assert(paused)
 	await key(KEY_F11)

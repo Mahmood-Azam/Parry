@@ -155,6 +155,7 @@ func take_damage(amount: float, _attacker: Node = null) -> bool:
 	if is_dead or amount <= 0.0:
 		return false
 	current_health = maxf(current_health - amount, 0.0)
+	preload("res://combat_impact.gd").hit(self, _attacker, amount)
 	health_bar.value = current_health
 	health_changed.emit(current_health, max_health)
 	if current_health <= 0.0:

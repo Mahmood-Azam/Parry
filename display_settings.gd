@@ -4,6 +4,7 @@ extends Node
 
 signal fullscreen_changed(enabled: bool)
 signal resolution_changed(description: String)
+signal master_volume_changed(percent: float)
 
 const SETTINGS_PATH := "user://shadowborn_settings.cfg"
 const BASE_SIZE := Vector2i(1280, 720)
@@ -21,6 +22,9 @@ var _transition_id := 0
 var _changing_mode := false
 var _windowed_mode: Window.Mode = Window.MODE_WINDOWED
 var _reported_fullscreen := false
+var _master_volume := 1.0
+var _volume_save_timer: Timer
+var _volume_dirty := false
 
 
 func _ready() -> void:
@@ -40,6 +44,16 @@ func _ready() -> void:
 	var error := _config.load(SETTINGS_PATH)
 	if error != OK and error != ERR_FILE_NOT_FOUND:
 		push_warning("Display settings could not be loaded: %s" % error_string(error))
+	var saved_volume: Variant = _config.get_value("audio", "master_volume", 1.0)
+	if (saved_volume is float or saved_volume is int) and is_finite(float(saved_volume)):
+		_master_volume = clampf(float(saved_volume), 0.0, 1.0)
+	_apply_master_volume()
+	_volume_save_timer = Timer.new()
+	_volume_save_timer.name = "VolumeSaveTimer"
+	_volume_save_timer.one_shot = true
+	_volume_save_timer.wait_time = 0.25
+	_volume_save_timer.timeout.connect(_save_volume)
+	add_child(_volume_save_timer)
 	var saved_value: Variant = _config.get_value("display", "fullscreen", true)
 	_fullscreen = saved_value if saved_value is bool else false
 	# A launch-time fullscreen request must not be undone by an old preference.
@@ -65,6 +79,82 @@ func _ready() -> void:
 
 func get_fullscreen() -> bool:
 	return _fullscreen if _changing_mode or DisplayServer.get_name() == "headless" else _native_fullscreen()
+
+
+func get_master_volume() -> float:
+	return _master_volume
+
+
+func set_master_volume(value: float) -> void:
+	if not is_finite(value):
+		return
+	value = clampf(value, 0.0, 1.0)
+	if is_equal_approx(value, _master_volume):
+		return
+	_master_volume = value
+	_apply_master_volume()
+	_config.set_value("audio", "master_volume", _master_volume)
+	_volume_dirty = true
+	_volume_save_timer.start()
+	master_volume_changed.emit(_master_volume * 100.0)
+
+
+func _apply_master_volume() -> void:
+	var bus := AudioServer.get_bus_index("Master")
+	AudioServer.set_bus_volume_db(bus, linear_to_db(maxf(_master_volume, 0.0001)))
+	AudioServer.set_bus_mute(bus, _master_volume <= 0.0)
+
+
+func _save_volume() -> void:
+	if not _volume_dirty:
+		return
+	var error := _config.save(SETTINGS_PATH)
+	if error == OK:
+		_volume_dirty = false
+	else:
+		push_warning("Volume setting could not be saved: %s" % error_string(error))
+
+
+func _exit_tree() -> void:
+	_save_volume()
+
+
+func create_volume_controls(parent: VBoxContainer) -> void:
+	var row := VBoxContainer.new()
+	row.name = "AudioSettingsControls"
+	parent.add_child(row)
+	var label := Label.new()
+	label.name = "VolumeLabel"
+	label.text = "MASTER VOLUME  %d%%" % roundi(_master_volume * 100.0)
+	label.add_theme_color_override("font_color", Color(1.0, 0.66, 0.3))
+	row.add_child(label)
+	var slider := HSlider.new()
+	slider.name = "MasterVolume"
+	slider.min_value = 0.0
+	slider.max_value = 100.0
+	slider.step = 1.0
+	slider.value = _master_volume * 100.0
+	slider.custom_minimum_size.y = 28.0
+	slider.tooltip_text = "Adjust all game audio. 0% mutes sound."
+	var track := StyleBoxFlat.new()
+	track.bg_color = Color(0.13, 0.12, 0.12)
+	track.content_margin_top = 4.0
+	track.content_margin_bottom = 4.0
+	track.set_corner_radius_all(4)
+	slider.add_theme_stylebox_override("slider", track)
+	var filled := track.duplicate() as StyleBoxFlat
+	filled.bg_color = Color(0.95, 0.35, 0.08)
+	slider.add_theme_stylebox_override("grabber_area", filled)
+	slider.add_theme_stylebox_override("grabber_area_highlight", filled)
+	row.add_child(slider)
+	slider.value_changed.connect(func(percent: float):
+		label.text = "MASTER VOLUME  %d%%" % roundi(percent) if percent > 0 else "MASTER VOLUME  MUTED"
+		set_master_volume(percent / 100.0)
+	)
+	slider.drag_ended.connect(func(_changed: bool): _save_volume())
+	master_volume_changed.connect(slider.set_value)
+	if _master_volume <= 0.0:
+		label.text = "MASTER VOLUME  MUTED"
 
 
 func _native_fullscreen() -> bool:

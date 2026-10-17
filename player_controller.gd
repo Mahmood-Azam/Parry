@@ -24,6 +24,8 @@ var JUMP_SCENE: PackedScene = load("res://assets/player/samurai/animations/Jump.
 var ATTACK_SCENE: PackedScene = load("res://assets/player/samurai/animations/One Hand Sword Combo.fbx")
 const SWORD_GUARD_SCRIPT = preload("res://sword_guard_pose.gd")
 const COMBAT_FX = preload("res://combat_fx.gd")
+const CONTACT_IMPACT = preload("res://combat_impact.gd")
+const HIT_PAUSE = preload("res://combat_hit_pause.gd")
 const SWORD_TRAIL_SCRIPT = preload("res://sword_trail.gd")
 const GROUNDING_SCRIPT = preload("res://locomotion_grounding.gd")
 const FLAME_AURA_SCRIPT = preload("res://flame_aura.gd")
@@ -35,15 +37,19 @@ var FIRE_AIR_SLASH_SCRIPT: Script = preload("res://fire_air_slash.gd")
 
 # --- Movement Configuration ---
 @export_group("Movement")
-@export var walk_speed: float = 3.8
-@export var run_speed: float = 6.2
-@export var jump_velocity: float = 4.6
-@export var turn_speed: float = 12.0
-@export var stopping_friction: float = 45.0
-@export var movement_acceleration: float = 28.0
-@export var movement_deceleration: float = 42.0
+@export var walk_speed: float = 5.8
+@export var run_speed: float = 8.6
+@export var jump_velocity: float = 6.2
+@export var turn_speed: float = 18.0
+@export var stopping_friction: float = 38.0
+@export var movement_acceleration: float = 58.0
+@export var movement_deceleration: float = 38.0
+@export_range(0.0, 1.0) var air_control: float = 0.48
+@export var step_height: float = 0.42
+@export var step_down_distance: float = 0.45
+@export var gravity_multiplier: float = 2.0
 @export var crouch_speed_multiplier: float = 0.45
-@export var block_speed_multiplier: float = 0.55
+@export var block_speed_multiplier: float = 0.70
 @export var jump_buffer_time: float = 0.14
 @export var jump_coyote_time: float = 0.12
 
@@ -84,7 +90,6 @@ var FIRE_AIR_SLASH_SCRIPT: Script = preload("res://fire_air_slash.gd")
 @export var parry_riposte_damage: float = 20.0
 @export var block_damage_multiplier: float = 0.35    ## Damage received while holding Right Mouse.
 @export var hit_stop_duration: float = 0.06         ## Brief freeze-frame after taking damage.
-@export var hit_stop_time_scale: float = 0.05        ## Time scale used during the impact frame.
 @export var hit_stun_duration: float = 0.28          ## How long controls are locked after a hit.
 @export var locomotion_blend_time: float = 0.14      ## Blend time between idle, walk, and run.
 @export var combat_blend_time: float = 0.045        ## Short blend for attacks, parries, and hit reactions.
@@ -109,10 +114,11 @@ var FIRE_AIR_SLASH_SCRIPT: Script = preload("res://fire_air_slash.gd")
 
 # --- Shadow Dash Configuration ---
 @export_group("Shadow Dash")
-@export var dash_speed: float = 15.0
-@export var dash_duration: float = 0.22
-@export var dash_cooldown: float = 0.90
+@export var dash_speed: float = 19.0
+@export var dash_duration: float = 0.28
+@export var dash_cooldown: float = 0.55
 @export var dash_invulnerability_time: float = 0.22
+@export var dash_buffer_time: float = 0.12
 
 # --- Node References ---
 @onready var character: Node3D = $WarriorKnight
@@ -150,11 +156,12 @@ var attack_start_basis := Basis.IDENTITY
 var attack_last_root_motion_position := Vector3.ZERO
 var attack_root_motion_tracks := {}
 var camera_trauma: float = 0.0
+var camera_shake_phase := 0.0
+var hit_flash_tween: Tween
 var camera_target_yaw: float = 0.0
 var camera_target_pitch: float = 0.0
 var camera_target_distance: float = 5.8
 var camera_unlocked: bool = false
-var show_controls_hud: bool = true
 var combat_feedback_label: Label
 var combat_feedback_tween: Tween
 var combat_stats_label: Label
@@ -167,14 +174,11 @@ var parry_sound: AudioStreamPlayer
 var parry_debug_ring: MeshInstance3D
 var parry_debug_material: StandardMaterial3D
 var parry_audio_stream: AudioStream = preload("res://assets/audio/Parry.mp3")
-var hit_stop_active: bool = false
 var hit_stun_remaining: float = 0.0
 var hit_reaction_elapsed: float = 0.0
 var hit_reaction_base_rotation: Vector3
 var hit_reaction_base_position: Vector3
 var dash_elapsed: float = 0.0
-var dash_base_rotation: Vector3
-var dash_base_position: Vector3
 var dash_base_scale: Vector3
 var shadow_decoy_script: Script = preload("res://shadow_decoy.gd")
 var locomotion_phase: float = 0.0
@@ -182,6 +186,7 @@ var locomotion_base_position: Vector3
 var jump_buffer_remaining: float = 0.0
 var jump_coyote_remaining: float = 0.0
 var jump_key_was_down: bool = false
+var suppress_jump_until_release := false
 var jump_requested: bool = false
 var attack_combo_phase: int = 0
 var attack_combo_queued: bool = false
@@ -207,6 +212,9 @@ var motion_fx_grounded := false
 var motion_fx_vertical_speed := 0.0
 var motion_fx_left_foot := false
 var motion_fx_dash_time := 0.0
+var dash_buffer_remaining := 0.0
+var camera_step_offset := 0.0
+var camera_rest_height := 1.35
 
 
 func _ready() -> void:
@@ -214,6 +222,21 @@ func _ready() -> void:
 	add_to_group("player")
 	collision_layer = 2
 	collision_mask = 1
+	floor_snap_length = step_down_distance
+	floor_constant_speed = true
+	floor_max_angle = deg_to_rad(46.0)
+	# A short flat sole provides stable edge support. A capsule alone touches
+	# stair nosings on its rounded hemisphere, interpreting them as steep walls.
+	var sole := CollisionShape3D.new()
+	sole.name = "MovementSole"
+	var sole_shape := CylinderShape3D.new()
+	sole_shape.radius = (collision_shape.shape as CapsuleShape3D).radius
+	sole_shape.height = 0.08
+	sole.shape = sole_shape
+	sole.position.y = 0.04
+	add_child(sole)
+	if camera_pivot != null:
+		camera_rest_height = camera_pivot.position.y
 	if camera_pivot != null:
 		camera_pivot.rotation.x = 0.0
 	if camera != null:
@@ -483,10 +506,9 @@ func _update_combat_stats() -> void:
 	elif parry_cooldown_timer > 0.0:
 		parry_state = "RECOVERY %.2fs" % parry_cooldown_timer
 	var dash_state := "READY" if dash_cooldown_timer <= 0.0 else "COOLDOWN %.2fs" % dash_cooldown_timer
-	var controls_text := "\n\nWASD Move   |   Shift Sprint   |   Ctrl Crouch   |   Space Jump\nF Parry   |   RMB Parry -> Block   |   Q Shadow Dash   |   LMB Attack\nMMB Hold: Channel Fire   |   Release: Air Slash\nE Ultimate: Inferno   |   G Ultimate: Focused Strike\nV Free Camera   |   P Kill All   |   O Collect Relic\nH Show/Hide Controls   |   R Fill Fire" if show_controls_hud else ""
-	combat_stats_label.text = "HP: %d / %d\nPARRY: %s  |  PERFECT: %.2fs / %.2fs  |  RANGE: %.1fm\nFIRE: %d / %d  |  BLADE: %s  |  RIPOSTE: %d/%d\nSHADOW: %s  |  CAMERA: %s%s" % [
+	combat_stats_label.text = "HP: %d / %d\nPARRY: %s  |  PERFECT: %.2fs / %.2fs  |  RANGE: %.1fm\nFIRE: %d / %d  |  BLADE: %s  |  RIPOSTE: %d/%d\nSHADOW: %s  |  CAMERA: %s" % [
 		roundi(current_health), roundi(max_health), parry_state, perfect_parry_window, parry_window, parry_hitbox_radius,
-		roundi(fire_meter), roundi(fire_meter_max), "CHARGING" if is_fire_channeling else ("IGNITED" if fire_meter > 0.0 else "COLD"), parry_chain_count, parries_for_riposte, dash_state, "FREE" if camera_unlocked else "FOLLOW", controls_text
+		roundi(fire_meter), roundi(fire_meter_max), "CHARGING" if is_fire_channeling else ("IGNITED" if fire_meter > 0.0 else "COLD"), parry_chain_count, parries_for_riposte, dash_state, "FREE" if camera_unlocked else "FOLLOW"
 	]
 	if fire_meter_bar != null:
 		fire_meter_bar.max_value = fire_meter_max
@@ -717,12 +739,13 @@ func _import_mixamo_clip(source_scene: PackedScene, clip_name: String, loop := f
 
 
 func _process(_delta: float) -> void:
+	# Damage stun used to return before camera feedback could update at all.
+	_process_screen_shake(_delta)
 	if not is_alive:
 		return
 
 	if hit_stun_remaining > 0.0:
 		return
-	_process_screen_shake(_delta)
 	_update_combat_stats()
 
 
@@ -763,10 +786,6 @@ func _unhandled_input(event: InputEvent) -> void:
 			return
 		if key_event.keycode == KEY_R:
 			_fill_fire_meter()
-			return
-		if key_event.keycode == KEY_H:
-			show_controls_hud = not show_controls_hud
-			_update_combat_stats()
 			return
 		if key_event.physical_keycode == KEY_SPACE or key_event.keycode == KEY_SPACE:
 			jump_buffer_remaining = jump_buffer_time
@@ -910,6 +929,10 @@ func _physics_process(delta: float) -> void:
 	_update_motion_effects(delta)
 	var jump_key_down := Input.is_key_pressed(KEY_SPACE)
 	var jump_pressed := Input.is_action_just_pressed("jump") or (jump_key_down and not jump_key_was_down)
+	if suppress_jump_until_release:
+		jump_pressed = false
+		if not jump_key_down and not Input.is_action_pressed("jump"):
+			suppress_jump_until_release = false
 	var attack_mouse_down := Input.is_mouse_button_pressed(MOUSE_BUTTON_LEFT)
 	var attack_mouse_pressed := attack_mouse_down and not attack_mouse_was_down
 	var attack_pressed := attack_requested or attack_mouse_pressed or Input.is_action_just_pressed("attack")
@@ -926,7 +949,7 @@ func _physics_process(delta: float) -> void:
 	
 	if not is_alive:
 		if not is_on_floor():
-			velocity.y -= gravity * delta
+			_apply_movement_gravity(delta)
 			move_and_slide()
 		return
 
@@ -939,10 +962,7 @@ func _physics_process(delta: float) -> void:
 		_face_camera_direction(delta)
 		velocity.x = 0.0
 		velocity.z = 0.0
-		if not is_on_floor():
-			velocity.y -= gravity * delta
-		else:
-			velocity.y = 0.0
+		_apply_movement_gravity(delta)
 		_play("Idle")
 		move_and_slide()
 		apply_floor_snap()
@@ -954,10 +974,7 @@ func _physics_process(delta: float) -> void:
 	if hit_stun_remaining > 0.0:
 		velocity.x = 0.0
 		velocity.z = 0.0
-		if not is_on_floor():
-			velocity.y -= gravity * delta
-		else:
-			velocity.y = 0.0
+		_apply_movement_gravity(delta)
 		hit_reaction_elapsed += delta
 		_update_hit_reaction_pose()
 		move_and_slide()
@@ -972,15 +989,20 @@ func _physics_process(delta: float) -> void:
 
 	_face_camera_direction(delta)
 
+	# Sample this before the attack branch: Shadow can cancel a melee swing,
+	# but never a damage stun, a charged slash, or an ultimate.
+	if Input.is_action_just_pressed("dash"):
+		dash_buffer_remaining = dash_buffer_time
+	if dash_buffer_remaining > 0.0 and try_start_dash():
+		dash_buffer_remaining = 0.0
+
 	# Resolve jump before locomotion/combat branches so a Space press cannot be
 	# swallowed by an animation state or by the movement floor-snap pass.
-	var jump_started := false
 	if jump_requested and (is_on_floor() or jump_coyote_remaining > 0.0) and not blocking and not attacking and not is_dashing:
 		velocity.y = jump_velocity
 		jump_buffer_remaining = 0.0
 		jump_coyote_remaining = 0.0
 		jump_requested = false
-		jump_started = true
 		COMBAT_FX.burst(get_tree().current_scene, global_position + Vector3.UP * 0.04, Color(0.5, 0.45, 0.38, 0.5), 8, 0.55, true)
 		animation_player.speed_scale = jump_animation_speed_scale
 		last_animation = ""
@@ -991,9 +1013,14 @@ func _physics_process(delta: float) -> void:
 		_update_dash_pose()
 		animation_player.speed_scale = 1.35
 		_play("Run")
-		velocity.x = dash_direction.x * dash_speed
-		velocity.z = dash_direction.z * dash_speed
-		move_and_slide()
+		# A quick burst with a soft tail, not constant velocity followed by a stop.
+		var progress := clampf(dash_elapsed / dash_duration, 0.0, 1.0)
+		var exit_speed := run_speed if Input.is_action_pressed("sprint") else walk_speed
+		var burst_speed := lerpf(dash_speed, exit_speed, smoothstep(0.35, 1.0, progress))
+		velocity.x = dash_direction.x * burst_speed
+		velocity.z = dash_direction.z * burst_speed
+		_apply_movement_gravity(delta)
+		_move_with_steps(delta)
 		return
 
 	if attacking:
@@ -1005,8 +1032,7 @@ func _physics_process(delta: float) -> void:
 		_apply_attack_root_motion()
 		velocity.x = 0.0
 		velocity.z = 0.0
-		if not is_on_floor():
-			velocity.y -= gravity * delta
+		_apply_movement_gravity(delta)
 		move_and_slide()
 		apply_floor_snap()
 		return
@@ -1027,17 +1053,9 @@ func _physics_process(delta: float) -> void:
 			last_animation = ""
 			_play("Idle")
 
-	var input_vector := Input.get_vector("move_left", "move_right", "move_forward", "move_back")
-	if input_vector.length_squared() < 0.001:
-		input_vector = Input.get_vector("move_left", "move_right", "move_forward", "move_backward")
-
-	# Movement is relative to the camera's yaw, as expected in a third-person controller.
-	var move_basis := camera_pivot.global_transform.basis if camera_pivot != null else global_transform.basis
-	var direction := (move_basis * Vector3(input_vector.x, 0.0, input_vector.y))
-	direction.y = 0.0
-	direction = direction.normalized()
+	var direction := _movement_input()
 	var moving := direction.length_squared() > 0.001
-	var sprinting := Input.is_key_pressed(KEY_SHIFT) and not crouching and not blocking
+	var sprinting := Input.is_action_pressed("sprint") and not crouching and not blocking
 
 	var speed := run_speed if sprinting else walk_speed
 	if crouching:
@@ -1045,20 +1063,19 @@ func _physics_process(delta: float) -> void:
 	if blocking:
 		speed *= block_speed_multiplier
 		
-	if moving:
-		velocity.x = move_toward(velocity.x, direction.x * speed, movement_acceleration * delta)
-		velocity.z = move_toward(velocity.z, direction.z * speed, movement_acceleration * delta)
-	else:
-		# Controlled deceleration prevents both skating and abrupt animation snaps.
-		var braking := maxf(stopping_friction, movement_deceleration)
-		velocity.x = move_toward(velocity.x, 0.0, braking * delta)
-		velocity.z = move_toward(velocity.z, 0.0, braking * delta)
-
-	if not is_on_floor() or jump_started:
-		velocity.y -= gravity * delta
-	else:
-		# Prevent stale upward velocity from being cancelled by floor snapping.
-		velocity.y = minf(velocity.y, 0.0)
+	var planar := Vector3(velocity.x, 0.0, velocity.z)
+	var acceleration := movement_acceleration if moving else maxf(stopping_friction, movement_deceleration)
+	if is_on_floor():
+		# Extra grip on reversals, with vector acceleration so diagonals are equal.
+		if moving and planar.dot(direction) < 0.0:
+			acceleration *= 1.4
+		planar = planar.move_toward(direction * speed, acceleration * delta)
+	elif moving:
+		planar = planar.move_toward(direction * speed, acceleration * air_control * delta)
+	# No-input airborne motion keeps its momentum rather than braking in midair.
+	velocity.x = planar.x
+	velocity.z = planar.z
+	_apply_movement_gravity(delta)
 
 	# Attack triggers
 	if Input.is_action_just_pressed("jump_attack") and not attacking and not blocking and not is_dashing:
@@ -1067,13 +1084,7 @@ func _physics_process(delta: float) -> void:
 	elif attack_pressed and not attacking and not blocking and not is_dashing:
 		_begin_attack("Attack")
 
-	# Shadow Dash trigger
-	if Input.is_action_just_pressed("dash") and not is_dashing and dash_cooldown_timer <= 0.0:
-		try_start_dash()
-
-	move_and_slide()
-	if not jump_started:
-		apply_floor_snap()
+	_move_with_steps(delta)
 	_update_locomotion_pose(delta, moving, sprinting)
 	if not attacking and not is_dashing and is_on_floor():
 		var planar_speed := Vector2(velocity.x, velocity.z).length()
@@ -1081,11 +1092,69 @@ func _physics_process(delta: float) -> void:
 			animation_player.speed_scale = 1.0
 			_play("Block" if blocking else "Idle")
 		else:
-			var use_run := sprinting and not blocking and planar_speed > walk_speed * 0.85
-			var gait_speed := clampf(planar_speed / run_speed, 0.45, 1.1) if use_run else clampf(planar_speed / walk_speed * 0.72, 0.32, 0.95)
+			# Match the gait to actual speed, including normal fast-paced traversal.
+			var use_run := not blocking and planar_speed > 4.2
+			var gait_speed := clampf(planar_speed / 5.8, 0.65, 1.5) if use_run else clampf(planar_speed / 3.8 * 0.85, 0.4, 1.3)
 			var backwards := character.global_basis.z.dot(Vector3(velocity.x, 0.0, velocity.z)) < -0.2
 			animation_player.speed_scale = -gait_speed if backwards else gait_speed
 			_play("Run" if use_run else "Walk")
+
+
+func _movement_input() -> Vector3:
+	var stick := Input.get_vector("move_left", "move_right", "move_forward", "move_back")
+	if stick.length_squared() < 0.001:
+		stick = Input.get_vector("move_left", "move_right", "move_forward", "move_backward")
+	var yaw := camera_pivot.global_rotation.y if camera_pivot != null else global_rotation.y
+	return Basis(Vector3.UP, yaw) * Vector3(stick.x, 0.0, stick.y)
+
+
+func _apply_movement_gravity(delta: float) -> void:
+	if not is_on_floor() or velocity.y > 0.0:
+		var fall_boost := 1.25 if velocity.y < 0.0 else 1.0
+		velocity.y = maxf(velocity.y - gravity * gravity_multiplier * fall_boost * delta, -35.0)
+	else:
+		velocity.y = 0.0
+
+
+func _move_with_steps(delta: float) -> void:
+	# Cast the entire capsule, not just a foot ray. Up, forward and down must
+	# all be clear; a wall, overhang or steep edge cannot become a free climb.
+	var grounded := is_on_floor()
+	var horizontal := Vector3(velocity.x, 0.0, velocity.z) * delta
+	if grounded and velocity.y <= 0.0 and horizontal.length_squared() > 0.000001:
+		var obstruction := KinematicCollision3D.new()
+		if test_move(global_transform, horizontal, obstruction):
+			var wall := obstruction.get_normal().dot(Vector3.UP) < cos(floor_max_angle)
+			if wall:
+				var raised := global_transform
+				var rise := Vector3.UP * (step_height + 0.02)
+				if not test_move(raised, rise):
+					raised.origin += rise
+					if not test_move(raised, horizontal):
+						raised.origin += horizontal
+						var landing := KinematicCollision3D.new()
+						if test_move(raised, Vector3.DOWN * (step_height + 0.04), landing):
+							var height := raised.origin.y + landing.get_travel().y - global_position.y
+							if height > 0.015 and height <= step_height + 0.005 and landing.get_normal().y >= cos(floor_max_angle):
+								global_position.y += height
+								_compensate_step_camera(height)
+	var before_move_y := global_position.y
+	move_and_slide()
+	# Follow descending curbs without triggering jump/landing animations. Never
+	# snap while rising, falling from a real ledge, or during a deliberate jump.
+	if grounded and velocity.y <= 0.0:
+		apply_floor_snap()
+		var dropped := global_position.y - before_move_y
+		if dropped < -0.015:
+			_compensate_step_camera(dropped)
+
+
+func _compensate_step_camera(height: float) -> void:
+	camera_step_offset -= height
+	# Apply in this same physics tick; waiting until the next camera update
+	# produces a one-frame upward jolt followed by a correction on every curb.
+	if camera_pivot != null:
+		camera_pivot.position.y = camera_rest_height + camera_step_offset
 
 
 func _face_camera_direction(delta: float) -> void:
@@ -1124,13 +1193,19 @@ func _fill_fire_meter() -> void:
 
 
 func _update_camera(delta: float) -> void:
+	camera_step_offset = lerpf(camera_step_offset, 0.0, 1.0 - exp(-14.0 * delta))
 	if camera_pivot != null:
+		camera_pivot.position.y = camera_rest_height + camera_step_offset
 		var rotation_weight := clampf(delta * camera_rotation_smoothing, 0.0, 1.0)
 		camera_pivot.rotation.y = lerp_angle(camera_pivot.rotation.y, camera_target_yaw, rotation_weight)
 		camera_pivot.rotation.x = lerp(camera_pivot.rotation.x, camera_target_pitch, rotation_weight)
 	if camera_arm != null:
 		var zoom_weight := clampf(delta * camera_zoom_smoothing, 0.0, 1.0)
 		camera_arm.spring_length = lerp(camera_arm.spring_length, camera_target_distance, zoom_weight)
+	if camera != null:
+		var motion := clampf(Vector2(velocity.x, velocity.z).length() / run_speed, 0.0, 1.0)
+		var target_fov := 58.0 + motion * 5.0 + (3.0 if is_dashing else 0.0)
+		camera.fov = lerpf(camera.fov, target_fov, 1.0 - exp(-7.0 * delta))
 
 
 func _set_crouch_pose(is_crouching: bool) -> void:
@@ -1265,13 +1340,15 @@ func _process_player_attack_hit() -> bool:
 		if enemy.has_method("apply_stun"):
 			enemy.call("apply_stun", player_attack_stun_duration)
 		if enemy.has_method("take_damage"):
-			enemy.call("take_damage", damage_from_fire, self)
-		COMBAT_FX.burst(get_tree().current_scene, enemy_center + Vector3.UP * 0.25, Color(1.0, 0.48, 0.045), 26, 0.85)
+			var accepted: bool = enemy.call("take_damage", damage_from_fire, self)
+			if damage_from_fire > 0.0 and not accepted:
+				continue
 		fire_meter = maxf(fire_meter - fire_to_consume, 0.0)
 		_update_fire_blade_effect()
 		_update_combat_stats()
 		_show_combat_feedback("HIT", Color(1.0, 0.72, 0.25))
-		_add_camera_trauma(0.18)
+		_add_camera_trauma(0.38)
+		HIT_PAUSE.request(get_tree().current_scene, 0.035)
 		hit_confirmed = true
 		break
 	return hit_confirmed
@@ -1462,19 +1539,20 @@ func _resolve_parry(attacker: Node, attack_data: Dictionary = {}) -> void:
 
 # --- Shadow Dash ---
 func try_start_dash() -> bool:
-	if not is_alive or is_using_ultimate or is_dashing or dash_cooldown_timer > 0.0:
+	if not is_alive or is_using_ultimate or is_fire_channeling or hit_stun_remaining > 0.0 or is_dashing or dash_cooldown_timer > 0.0:
 		return false
 	if is_parrying:
 		_end_parry(false)
 	attacking = false
 	is_attacking = false
+	attack_combo_phase = 0
+	attack_combo_queued = false
+	if blocking:
+		_end_block()
 
-	var input_vector := Input.get_vector("move_left", "move_right", "move_forward", "move_back")
-	if input_vector.length_squared() > 0.001:
-		var move_basis := camera_pivot.global_transform.basis if camera_pivot != null else global_transform.basis
-		dash_direction = move_basis * Vector3(input_vector.x, 0.0, input_vector.y)
-		dash_direction.y = 0.0
-		dash_direction = dash_direction.normalized()
+	var direction := _movement_input()
+	if direction.length_squared() > 0.001:
+		dash_direction = direction.normalized()
 	else:
 		dash_direction = character.global_transform.basis.z.normalized()
 		dash_direction.y = 0.0
@@ -1485,8 +1563,6 @@ func try_start_dash() -> bool:
 	is_invulnerable = true
 	dash_timer = 0.0
 	dash_elapsed = 0.0
-	dash_base_rotation = character.rotation
-	dash_base_position = character.position
 	dash_base_scale = character.scale
 	dash_invulnerability_timer = 0.0
 	dash_cooldown_timer = dash_cooldown
@@ -1504,11 +1580,10 @@ func _end_dash() -> void:
 	is_dashing = false
 	is_invulnerable = false
 	if character != null:
-		character.rotation = dash_base_rotation
-		character.position = dash_base_position
+		# Keep the current yaw and let locomotion blend out the lean. Restoring
+		# the dash-start rotation made camera turns visibly snap backwards.
+		character.position = locomotion_base_position
 		character.scale = dash_base_scale
-	velocity.x = 0.0
-	velocity.z = 0.0
 	emit_signal("dash_finished")
 
 
@@ -1516,9 +1591,11 @@ func _update_dash_pose() -> void:
 	if character == null:
 		return
 	var progress := clampf(dash_elapsed / maxf(dash_duration, 0.01), 0.0, 1.0)
-	var bob := sin(progress * PI) * 0.16
-	character.rotation = dash_base_rotation + Vector3(-0.22, 0.0, 0.0)
-	character.position = dash_base_position + Vector3(0.0, bob, 0.0)
+	var envelope := sin(progress * PI)
+	var local_direction := character.global_basis.inverse() * dash_direction
+	character.rotation.x = -local_direction.z * 0.20 * envelope
+	character.rotation.z = local_direction.x * 0.12 * envelope
+	character.position = locomotion_base_position
 
 
 func _update_motion_effects(delta: float) -> void:
@@ -1656,9 +1733,8 @@ func take_damage(amount: float, attacker: Node = null, _attack_type: String = "m
 	_begin_hit_reaction(was_blocking)
 	emit_signal("damaged", final_damage, attacker)
 	emit_signal("health_changed", current_health, max_health)
-	_add_camera_trauma(0.35)
 	_show_combat_feedback("BLOCK" if was_blocking else "HIT", Color(0.35, 0.8, 1.0) if was_blocking else Color(1.0, 0.3, 0.2))
-	_spawn_hit_effect(attacker, was_blocking)
+	CONTACT_IMPACT.hit(self, attacker, final_damage, was_blocking)
 	_trigger_hit_impact(was_blocking)
 
 	if current_health <= 0.0:
@@ -1703,7 +1779,11 @@ func _die() -> void:
 
 
 func _update_timers(delta: float) -> void:
+	dash_buffer_remaining = maxf(dash_buffer_remaining - delta, 0.0)
+	dash_cooldown_timer = maxf(dash_cooldown_timer - delta, 0.0)
 	jump_buffer_remaining = maxf(jump_buffer_remaining - delta, 0.0)
+	if jump_buffer_remaining <= 0.0:
+		jump_requested = false
 	if hit_stun_remaining > 0.0:
 		hit_stun_remaining = maxf(hit_stun_remaining - delta, 0.0)
 		if hit_stun_remaining <= 0.0:
@@ -1725,8 +1805,6 @@ func _update_timers(delta: float) -> void:
 			is_invulnerable = false
 		if dash_timer >= dash_duration:
 			_end_dash()
-	elif dash_cooldown_timer > 0.0:
-		dash_cooldown_timer -= delta
 
 
 func _trigger_parry_feedback(is_perfect: bool) -> void:
@@ -1734,19 +1812,14 @@ func _trigger_parry_feedback(is_perfect: bool) -> void:
 
 
 func _trigger_hit_impact(was_blocking: bool = false) -> void:
-	_add_camera_trauma(0.32 if was_blocking else 0.7)
+	_add_camera_trauma(0.30 if was_blocking else 0.8)
 	if hit_flash != null:
-		hit_flash.color = Color(0.05, 0.42, 1.0, 0.16) if was_blocking else Color(1.0, 0.08, 0.04, 0.28)
-		var flash_tween := create_tween()
-		flash_tween.tween_property(hit_flash, "color:a", 0.0, 0.10 if was_blocking else 0.16)
-	if hit_stop_active:
-		return
-	hit_stop_active = true
-	var previous_time_scale := Engine.time_scale
-	Engine.time_scale = hit_stop_time_scale
-	await get_tree().create_timer(hit_stop_duration, true, false, true).timeout
-	Engine.time_scale = previous_time_scale
-	hit_stop_active = false
+		if is_instance_valid(hit_flash_tween):
+			hit_flash_tween.kill()
+		hit_flash.color = Color(0.05, 0.42, 1.0, 0.12) if was_blocking else Color(0.8, 0.03, 0.01, 0.24)
+		hit_flash_tween = create_tween()
+		hit_flash_tween.tween_property(hit_flash, "color:a", 0.0, 0.12 if was_blocking else 0.24).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
+	HIT_PAUSE.request(get_tree().current_scene, 0.025 if was_blocking else hit_stop_duration)
 
 
 func _begin_hit_reaction(keep_blocking: bool = false) -> void:
@@ -1776,10 +1849,12 @@ func _begin_hit_reaction(keep_blocking: bool = false) -> void:
 func _update_hit_reaction_pose() -> void:
 	if character == null:
 		return
-	var recoil := sin(minf(hit_reaction_elapsed * 11.0, PI * 0.5)) * 0.18
-	var shake := sin(hit_reaction_elapsed * 48.0) * 0.07
-	character.rotation = hit_reaction_base_rotation + Vector3(-recoil, 0.0, shake)
-	character.position = hit_reaction_base_position + Vector3(shake * 0.05, abs(sin(hit_reaction_elapsed * 34.0)) * 0.035, 0.0)
+	# Additive torso recoil supplies the strike; a small settling lean replaces
+	# the old whole-body lateral wobble and vertical bouncing.
+	var progress := clampf(hit_reaction_elapsed / maxf(hit_stun_duration, 0.01), 0.0, 1.0)
+	var recoil := sin(progress * PI) * 0.065
+	character.rotation = hit_reaction_base_rotation + Vector3(-recoil, 0.0, 0.0)
+	character.position = hit_reaction_base_position
 
 
 func _end_hit_reaction() -> void:
@@ -1929,9 +2004,10 @@ func _process_screen_shake(delta: float) -> void:
 		return
 	if camera_trauma > 0.0:
 		camera_trauma = max(0.0, camera_trauma - delta * 3.5)
-		var shake := camera_trauma * camera_trauma * 0.16
-		camera.h_offset = randf_range(-shake, shake)
-		camera.v_offset = randf_range(-shake, shake)
+		camera_shake_phase += delta * 65.0
+		var shake := camera_trauma * camera_trauma
+		camera.h_offset = sin(camera_shake_phase * 1.17) * shake * 0.09
+		camera.v_offset = cos(camera_shake_phase * 1.53) * shake * 0.055
 	else:
 		camera.h_offset = 0.0
 		camera.v_offset = 0.0

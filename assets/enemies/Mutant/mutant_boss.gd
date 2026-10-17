@@ -216,8 +216,8 @@ func take_damage(amount: float, _attacker: Node = null, play_hit_audio: bool = t
 	if flexing:
 		return false
 	current_health = maxf(current_health - amount, 0.0)
-	if play_hit_audio and not hit_sound.playing:
-		hit_sound.play()
+	preload("res://combat_impact.gd").hit(self, _attacker, amount)
+	hit_sound.play()
 	if not flexed and current_health <= max_health * 0.05:
 		flexed = true
 		flexing = true
