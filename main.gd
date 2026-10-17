@@ -72,7 +72,7 @@ func _build_menu() -> void:
 	title_background.add_child(menu_atmosphere)
 	menu_layer.add_child(overlay)
 
-	home_panel = _make_panel("FAST: rewind", true)
+	home_panel = _make_panel("FAST in Flames", true)
 	var home_box := home_panel.get_node("Margin/VBox") as VBoxContainer
 	home_panel.add_theme_stylebox_override("panel", StyleBoxEmpty.new())
 	home_panel.set_anchors_preset(Control.PRESET_TOP_LEFT)
@@ -157,7 +157,7 @@ func _build_menu() -> void:
 	settings.add_child(controls_heading)
 	var controls := Label.new()
 	controls.name = "ControlsReference"
-	controls.text = "WASD Move  |  Shift Sprint  |  Ctrl Crouch\nSpace Jump  |  X Jump Attack\nMouse Look  |  Scroll Wheel Zoom\nF Parry  |  RMB Parry, then hold to Block\nQ Shadow Dash  |  LMB Fire Attack\nMMB Hold: Channel Fire\nRelease MMB: Air Slash\nE Ultimate: Inferno (area blast)\nG Ultimate: Focused Strike\nO Collect Relic  |  V Free Camera\nFree Camera: WASD Fly  |  Space/Ctrl Up/Down\nShift Fast  |  V/Esc Return\nEsc Menu  |  F11 / Alt+Enter Fullscreen\n\nFire: orange first layer, violet second layer.\nAttacks and decay spend the same reserve.\nFull violet unlocks E/G; an ultimate uses it all.\nThree amber marks: triple strike, parry all three.\n\nPractice: R Add 100 Fire  |  P Kill All"
+	controls.text = "WASD Move  |  Shift Sprint  |  Ctrl Crouch\nSpace Jump  |  X Jump Attack\nMouse Look  |  Scroll Wheel Zoom\nF Parry  |  RMB Parry, then hold to Block\nQ Shadow Dash  |  C Soul Steal\nLMB Fire Attack  |  MMB Hold: Channel Fire\nRelease MMB: Air Slash\nE Ultimate: Inferno (area blast)\nG Ultimate: Focused Strike\nO Collect Relic  |  V Free Camera\nFree Camera: WASD Fly  |  Space/Ctrl Up/Down\nShift Fast  |  V/Esc Return\nEsc Menu  |  F11 / Alt+Enter Fullscreen\n\nSoul Steal: shadow strikes nearby enemies in sequence,\nrestoring 10 health per hit (10s cooldown).\nFire: orange first layer, violet second layer.\nAttacks and decay spend the same reserve.\nFull violet unlocks E/G; an ultimate uses it all.\nThree amber marks: triple strike, parry all three.\n\nPractice: R Add 100 Fire  |  P Kill All"
 	controls.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	controls.add_theme_font_size_override("font_size", 15)
 	controls.add_theme_color_override("font_color", Color(0.82, 0.87, 0.98))

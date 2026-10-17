@@ -7,6 +7,7 @@ var health_label: Label
 var fire_label: Label
 var ultimate_label: Label
 var dash_label: Label
+var soul_label: Label
 var parry_label: Label
 var dash_bar: ProgressBar
 
@@ -14,7 +15,7 @@ func _ready() -> void:
 	name = "PlayerStatusHUD"
 	mouse_filter = Control.MOUSE_FILTER_IGNORE
 	position = Vector2(20, 20)
-	size = Vector2(276, 166)
+	size = Vector2(276, 190)
 	var frame := StyleBoxFlat.new()
 	frame.bg_color = Color(0.025, 0.022, 0.035, 0.86)
 	frame.border_color = Color(0.43, 0.30, 0.20, 0.8)
@@ -53,7 +54,8 @@ func _ready() -> void:
 	add_child(dash_bar)
 	dash_bar.position = Vector2(208, 121)
 	dash_bar.size = Vector2(52, 4)
-	parry_label = _label("GuardStatus", Vector2(16, 138), 12, Color(0.76, 0.77, 0.83))
+	soul_label = _label("SoulStealStatus", Vector2(16, 137), 12, Color(0.67, 0.60, 0.96))
+	parry_label = _label("GuardStatus", Vector2(16, 161), 12, Color(0.76, 0.77, 0.83))
 	refresh()
 
 func _label(label_name: String, at: Vector2, font_size: int, tint: Color) -> Label:
@@ -88,6 +90,9 @@ func refresh() -> void:
 	dash_label.text = "[Q] SHADOW:  %.1fs" % cooldown if cooldown > 0.0 else "[Q] SHADOW:  READY"
 	dash_label.modulate.a = 0.65 if cooldown > 0 else 1.0
 	dash_bar.value = clampf(1.0 - cooldown / maxf(controller.dash_cooldown, 0.01), 0, 1)
+	var soul_cooldown: float = controller.soul_steal_cooldown_timer
+	soul_label.text = "[C] SOUL STEAL:  %.1fs" % soul_cooldown if soul_cooldown > 0.0 else "[C] SOUL STEAL:  READY"
+	soul_label.modulate.a = 0.62 if soul_cooldown > 0.0 else 1.0
 	var guard := "READY"
 	if controller.hit_stun_remaining > 0:
 		guard = "STAGGERED"

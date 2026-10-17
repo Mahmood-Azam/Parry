@@ -1,51 +1,23 @@
 extends Node3D
-## Flame tongues track the animated rig instead of wrapping the boss in a mesh.
+## Shared boss plasma; the mutant and Bara Ustaad use bone-tracked fist flames.
 
 const FX := preload("res://combat_fx.gd")
-const FLAME_SHADER := """
-shader_type spatial;
-render_mode unshaded, cull_disabled, blend_add, depth_draw_never;
-uniform vec4 aura_color : source_color = vec4(0.7, 0.3, 1.0, 1.0);
-uniform float effect_time = 0.0;
-uniform float opacity = 1.0;
-uniform float attack_pulse = 0.0;
-instance uniform float seed = 0.0;
-float hash(vec2 p) { return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
-float noise(vec2 p) {
-	vec2 cell = floor(p);
-	vec2 f = fract(p);
-	f = f * f * (3.0 - 2.0 * f);
-	return mix(mix(hash(cell), hash(cell + vec2(1.0, 0.0)), f.x),
-		mix(hash(cell + vec2(0.0, 1.0)), hash(cell + vec2(1.0)), f.x), f.y);
-}
-void fragment() {
-	float y = 1.0 - UV.y;
-	float x = UV.x * 2.0 - 1.0;
-	float t = effect_time + seed * 11.0;
-	float flow = noise(vec2(x * 3.7 + seed * 17.0, y * 5.0 - t * 3.4));
-	float detail = noise(vec2(x * 9.0, y * 15.0 - t * 7.0));
-	float bend = sin(y * 7.0 - t * 4.5) * y * 0.13 + (flow - 0.5) * y * 0.45;
-	float width = mix(0.90, 0.015, pow(y, 0.72)) * (0.60 + flow * 0.52);
-	float shape = 1.0 - smoothstep(width * 0.65, width, abs(x + bend));
-	float ragged_tip = 1.0 - smoothstep(0.68 + flow * 0.20, 1.0, y);
-	float intensity = shape * ragged_tip * smoothstep(0.0, 0.10, y);
-	float core = pow(shape, 2.6) * (1.0 - y) * (0.55 + detail * 0.45);
-	vec3 edge_color = aura_color.rgb * 0.62;
-	vec3 hot_color = mix(aura_color.rgb, vec3(1.0), 0.68);
-	vec3 flame = mix(edge_color, hot_color, core);
-	ALBEDO = flame;
-	EMISSION = flame * (1.8 + attack_pulse * 1.8);
-	ALPHA = intensity * opacity * (0.55 + flow * 0.35 + detail * 0.10);
-}
-"""
+const FLOW := preload("res://assets/vfx/boss_plasma_flow.png")
+const RING_SHADER := preload("res://assets/vfx/boss_aura_ring.gdshader")
+const VEIL_SHADER := preload("res://assets/vfx/boss_aura_veil.gdshader")
+const FIST_SHADER := preload("res://assets/vfx/boss_fist_flame.gdshader")
+const FIST_PARTICLE_SHADER := preload("res://assets/vfx/boss_fist_cinder.gdshader")
 
 var owner_body: CharacterBody3D
-var rig: Skeleton3D
-var aura_color := Color(0.65, 0.30, 1.0)
+var aura_color := Color(1.0, 0.32, 0.07)
 var body_height := 2.0
 var body_radius := 0.85
-var flames: Array[Dictionary] = []
-var flame_material: ShaderMaterial
+var final_boss := false
+var fist_only := false
+var ring_material: ShaderMaterial
+var veil_material: ShaderMaterial
+var fist_rig: Skeleton3D
+var fists: Array[Dictionary] = []
 var motes: GPUParticles3D
 var splash: GPUParticles3D
 var glow: OmniLight3D
@@ -55,75 +27,185 @@ var fade := 1.0
 var fading := false
 
 
-func configure(color: Color, height: float, radius: float) -> void:
+func configure(color: Color, height: float, radius: float, is_final_boss: bool = false, use_fist_flames: bool = false) -> void:
 	aura_color = color
 	body_height = height
 	body_radius = radius
+	final_boss = is_final_boss
+	fist_only = use_fist_flames
 
 
 func _ready() -> void:
 	process_mode = Node.PROCESS_MODE_PAUSABLE
 	owner_body = get_parent() as CharacterBody3D
+	if final_boss or fist_only:
+		process_priority = 10
+		_build_fist_flames()
+	else:
+		_build_plasma()
+		motes = _make_particles(false)
+		splash = _make_particles(true)
+		glow = OmniLight3D.new()
+		glow.name = "PlasmaAuraGlow"
+		glow.position.y = body_height * 0.38
+		glow.light_color = aura_color
+		glow.light_energy = 0.85
+		glow.omni_range = maxf(3.0, body_height * 0.86)
+		glow.shadow_enabled = false
+		add_child(glow)
+
+
+func _build_plasma() -> void:
+	ring_material = ShaderMaterial.new()
+	ring_material.shader = RING_SHADER
+	ring_material.set_shader_parameter("flow_texture", FLOW)
+	var ground := MeshInstance3D.new()
+	ground.name = "LivingPlasmaRing"
+	var ground_mesh := QuadMesh.new()
+	ground_mesh.size = Vector2.ONE * body_radius * 4.4
+	ground.mesh = ground_mesh
+	ground.material_override = ring_material
+	ground.rotation.x = -PI * 0.5
+	ground.position.y = 0.045
+	ground.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	add_child(ground)
+
+	veil_material = ShaderMaterial.new()
+	veil_material.shader = VEIL_SHADER
+	veil_material.set_shader_parameter("flow_texture", FLOW)
+	var veil := MeshInstance3D.new()
+	veil.name = "RisingPlasmaVeil"
+	veil.mesh = _make_veil_mesh()
+	veil.material_override = veil_material
+	veil.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	add_child(veil)
+
+
+func _build_fist_flames() -> void:
 	var rigs := owner_body.find_children("*", "Skeleton3D", true, false)
-	rig = rigs[0] as Skeleton3D if not rigs.is_empty() else null
-	_build_flames()
-	motes = _make_particles(false)
-	splash = _make_particles(true)
-	glow = OmniLight3D.new()
-	glow.name = "FlameAuraGlow"
-	glow.position.y = body_height * 0.48
-	glow.light_color = aura_color
-	glow.light_energy = 0.85
-	glow.omni_range = maxf(3.0, body_height * 0.86)
-	glow.shadow_enabled = false
-	add_child(glow)
+	if rigs.is_empty():
+		push_error("Boss fist aura needs a Skeleton3D")
+		return
+	fist_rig = rigs[0] as Skeleton3D
+	for side in ["Left", "Right"]:
+		var wrist := fist_rig.find_bone("mixamorig_%sHand" % side)
+		var knuckle := fist_rig.find_bone("mixamorig_%sHandMiddle2" % side) if final_boss else -1
+		if wrist < 0:
+			push_error("Missing %s fist bones" % side)
+			continue
+		var anchor := Node3D.new()
+		anchor.name = "%sFistFlame" % side
+		anchor.scale = Vector3.ONE * (1.0 if final_boss else 0.60)
+		add_child(anchor)
+		var core := MeshInstance3D.new()
+		core.name = "LivingFistFlame"
+		var sphere := SphereMesh.new()
+		sphere.radius = 0.58
+		sphere.height = 1.16
+		sphere.radial_segments = 48
+		sphere.rings = 24
+		core.mesh = sphere
+		var core_material := ShaderMaterial.new()
+		core_material.shader = FIST_SHADER
+		core_material.set_shader_parameter("flow_texture", FLOW)
+		core_material.set_shader_parameter("phase", 0.0 if side == "Left" else 3.7)
+		if fist_only:
+			core_material.set_shader_parameter("dark_color", Color(0.005, 0.012, 0.14))
+			core_material.set_shader_parameter("flame_color", Color(0.025, 0.27, 1.0))
+			core_material.set_shader_parameter("hot_color", Color(0.12, 0.70, 1.0))
+		core.material_override = core_material
+		core.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+		anchor.add_child(core)
+		var cinders := _make_fist_cinders(anchor, side)
+		var light := OmniLight3D.new()
+		light.name = "FistFlameLight"
+		light.light_color = aura_color
+		light.light_energy = 1.4
+		light.omni_range = 2.1
+		light.shadow_enabled = false
+		anchor.add_child(light)
+		fists.append({"anchor": anchor, "wrist": wrist, "knuckle": knuckle, "material": core_material, "cinders": cinders, "light": light})
+	_update_fist_positions()
 
 
-func _build_flames() -> void:
-	var shader := Shader.new()
-	shader.code = FLAME_SHADER
-	flame_material = ShaderMaterial.new()
-	flame_material.shader = shader
-	flame_material.set_shader_parameter("aura_color", aura_color)
+func _make_fist_cinders(anchor: Node3D, side: String) -> GPUParticles3D:
+	var particles := GPUParticles3D.new()
+	particles.name = "%sFistFlameTongues" % side
+	particles.amount = 64
+	particles.lifetime = 0.43
+	particles.local_coords = false
+	particles.transform_align = GPUParticles3D.TRANSFORM_ALIGN_Z_BILLBOARD
+	particles.emitting = true
+	particles.visibility_aabb = AABB(Vector3(-2.0, -2.0, -2.0), Vector3.ONE * 4.0)
+	particles.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	var motion := ParticleProcessMaterial.new()
+	motion.direction = Vector3.UP
+	motion.spread = 52.0
+	motion.initial_velocity_min = 0.4
+	motion.initial_velocity_max = 1.25
+	motion.gravity = Vector3(0.0, 0.5, 0.0)
+	motion.emission_shape = ParticleProcessMaterial.EMISSION_SHAPE_SPHERE
+	motion.emission_sphere_radius = 0.31
+	motion.scale_min = 0.7
+	motion.scale_max = 1.4
+	particles.process_material = motion
+	var material := ShaderMaterial.new()
+	material.shader = FIST_PARTICLE_SHADER
+	material.set_shader_parameter("flow_texture", FLOW)
+	if fist_only:
+		material.set_shader_parameter("dark_color", Color(0.005, 0.025, 0.18))
+		material.set_shader_parameter("flame_color", Color(0.065, 0.48, 1.0))
 	var quad := QuadMesh.new()
-	quad.size = Vector2.ONE
-	var sections := [
-		{"bones": ["hips", "pelvis"], "level": 0.22, "reach": 0.65, "length": 0.38, "count": 12},
-		{"bones": ["spine", "chest"], "level": 0.52, "reach": 0.60, "length": 0.34, "count": 14},
-		{"bones": ["head", "neck"], "level": 0.83, "reach": 0.42, "length": 0.24, "count": 8},
-		{"bones": ["leftarm", "upperarml", "arm_l"], "level": 0.63, "reach": 0.29, "length": 0.26, "count": 6},
-		{"bones": ["rightarm", "upperarmr", "arm_r"], "level": 0.63, "reach": 0.29, "length": 0.26, "count": 6},
-		{"bones": ["leftforearm", "lowerarml", "forearm_l"], "level": 0.50, "reach": 0.19, "length": 0.21, "count": 4},
-		{"bones": ["rightforearm", "lowerarmr", "forearm_r"], "level": 0.50, "reach": 0.19, "length": 0.21, "count": 4},
-		{"bones": ["leftupleg", "leftleg", "thigh_l"], "level": 0.26, "reach": 0.26, "length": 0.31, "count": 6},
-		{"bones": ["rightupleg", "rightleg", "thigh_r"], "level": 0.26, "reach": 0.26, "length": 0.31, "count": 6},
-		{"bones": ["leftfoot", "leftcalf", "shin_l"], "level": 0.10, "reach": 0.22, "length": 0.22, "count": 4},
-		{"bones": ["rightfoot", "rightcalf", "shin_r"], "level": 0.10, "reach": 0.22, "length": 0.22, "count": 4},
-	]
-	for section_index in sections.size():
-		var section: Dictionary = sections[section_index]
-		var bone := _find_bone(section["bones"])
-		for index in int(section["count"]):
-			var tongue := MeshInstance3D.new()
-			tongue.name = "AnimatedFlame_%02d_%02d" % [section_index, index]
-			tongue.mesh = quad
-			tongue.material_override = flame_material
-			tongue.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
-			tongue.set_instance_shader_parameter("seed", float(section_index * 17 + index) * 0.173)
-			add_child(tongue)
-			var angle := float(index) * 2.399963 + float(section_index) * 0.91
-			flames.append({"node": tongue, "bone": bone, "level": section["level"], "reach": section["reach"], "length": section["length"], "angle": angle, "seed": float(index * 7 + section_index * 13)})
+	quad.size = Vector2(0.32, 0.74)
+	quad.material = material
+	particles.draw_pass_1 = quad
+	anchor.add_child(particles)
+	return particles
 
 
-func _find_bone(names: Array) -> int:
-	if rig == null:
-		return -1
-	for wanted: String in names:
-		for index in rig.get_bone_count():
-			var name := String(rig.get_bone_name(index)).to_lower().replace("_", "").replace(" ", "")
-			if name.contains(wanted):
-				return index
-	return -1
+func _update_fist_positions() -> void:
+	if not is_instance_valid(fist_rig):
+		return
+	for fist in fists:
+		var wrist: int = fist["wrist"]
+		var knuckle: int = fist["knuckle"]
+		var wrist_position := fist_rig.to_global(fist_rig.get_bone_global_pose(wrist).origin)
+		var anchor := fist["anchor"] as Node3D
+		if knuckle >= 0:
+			var knuckle_position := fist_rig.to_global(fist_rig.get_bone_global_pose(knuckle).origin)
+			anchor.global_position = wrist_position.lerp(knuckle_position, 0.48)
+		else:
+			var wrist_pose := fist_rig.get_bone_global_pose(wrist)
+			anchor.global_position = fist_rig.to_global(wrist_pose.origin + wrist_pose.basis.y * 0.25)
+
+
+func _make_veil_mesh() -> ArrayMesh:
+	var vertices := PackedVector3Array()
+	var uv := PackedVector2Array()
+	var indices := PackedInt32Array()
+	var sides := 64
+	var levels := 16
+	for level in levels + 1:
+		var height_fraction := float(level) / float(levels)
+		var radius := body_radius * (1.12 + 0.20 * sin(height_fraction * PI) - 0.23 * height_fraction)
+		for side in sides + 1:
+			var around := float(side) / float(sides)
+			var angle := around * TAU
+			var contour := 1.0 + 0.07 * sin(angle * 5.0 + height_fraction * 8.0) + 0.035 * sin(angle * 11.0 - height_fraction * 13.0)
+			vertices.append(Vector3(cos(angle) * radius * contour, body_height * (0.035 + height_fraction * 1.08), sin(angle) * radius * contour))
+			uv.append(Vector2(around, height_fraction))
+	for level in levels:
+		for side in sides:
+			var first := level * (sides + 1) + side
+			indices.append_array(PackedInt32Array([first, first + sides + 1, first + 1, first + 1, first + sides + 1, first + sides + 2]))
+	var arrays := []
+	arrays.resize(Mesh.ARRAY_MAX)
+	arrays[Mesh.ARRAY_VERTEX] = vertices
+	arrays[Mesh.ARRAY_TEX_UV] = uv
+	arrays[Mesh.ARRAY_INDEX] = indices
+	var mesh := ArrayMesh.new()
+	mesh.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES, arrays)
+	return mesh
 
 
 func _make_particles(is_splash: bool) -> GPUParticles3D:
@@ -149,9 +231,9 @@ func _make_particles(is_splash: bool) -> GPUParticles3D:
 	motion.scale_min = 0.6
 	motion.scale_max = 1.35
 	var gradient := Gradient.new()
-	gradient.set_color(0, Color(aura_color.r, aura_color.g, aura_color.b, 0.0))
-	gradient.add_point(0.15, Color(aura_color.r, aura_color.g, aura_color.b, 0.85))
-	gradient.set_color(gradient.get_point_count() - 1, Color(aura_color.r, aura_color.g, aura_color.b, 0.0))
+	gradient.set_color(0, Color(0.3, 0.02, 0.12, 0.0))
+	gradient.add_point(0.15, Color(1.0, 0.38, 0.07, 0.85))
+	gradient.set_color(gradient.get_point_count() - 1, Color(0.24, 0.02, 0.17, 0.0))
 	var ramp := GradientTexture1D.new()
 	ramp.gradient = gradient
 	motion.color_ramp = ramp
@@ -179,28 +261,21 @@ func _process(delta: float) -> void:
 	if fading:
 		fade = move_toward(fade, 0.0, delta * 2.0)
 		visible = fade > 0.01
-	flame_material.set_shader_parameter("effect_time", clock)
-	flame_material.set_shader_parameter("attack_pulse", pulse)
-	flame_material.set_shader_parameter("opacity", fade * (0.72 + pulse * 0.16))
-	glow.light_energy = fade * (0.80 + sin(clock * 3.0) * 0.12 + pulse * 1.8)
-	var camera := get_viewport().get_camera_3d()
-	var bone_positions := {}
-	for flame in flames:
-		var tongue := flame["node"] as MeshInstance3D
-		var anchor := owner_body.to_global(Vector3.UP * body_height * float(flame["level"]))
-		var bone: int = flame["bone"]
-		if rig != null and bone >= 0:
-			if not bone_positions.has(bone):
-				bone_positions[bone] = rig.to_global(rig.get_bone_global_pose(bone).origin)
-			anchor = bone_positions[bone]
-		var angle: float = flame["angle"] + sin(clock * 1.4 + float(flame["seed"])) * 0.12
-		var radial := Vector3(cos(angle), 0.0, sin(angle)) * body_radius * float(flame["reach"])
-		tongue.global_position = anchor + owner_body.global_basis * radial + Vector3.UP * body_height * float(flame["length"]) * 0.28
-		if camera != null:
-			var toward := camera.global_position - tongue.global_position
-			tongue.global_rotation = Vector3(0.0, atan2(toward.x, toward.z), 0.0)
-		var flicker := 0.84 + sin(clock * 7.0 + float(flame["seed"]) * 2.1) * 0.12 + pulse * 0.12
-		tongue.scale = Vector3(body_radius * float(flame["reach"]) * 1.08 * flicker, body_height * float(flame["length"]) * flicker, 1.0)
+	if final_boss or fist_only:
+		_update_fist_positions()
+		for fist in fists:
+			var material := fist["material"] as ShaderMaterial
+			material.set_shader_parameter("effect_time", clock)
+			material.set_shader_parameter("attack_pulse", pulse)
+			material.set_shader_parameter("opacity", fade)
+			var light := fist["light"] as OmniLight3D
+			light.light_energy = fade * (1.25 + 0.16 * sin(clock * 9.0 + float(fist["wrist"])) + pulse * 1.2)
+		return
+	for material in [ring_material, veil_material]:
+		material.set_shader_parameter("effect_time", clock)
+		material.set_shader_parameter("attack_pulse", pulse)
+		material.set_shader_parameter("opacity", fade)
+	glow.light_energy = fade * (0.8 + sin(clock * 3.0) * 0.12 + pulse * 1.8)
 
 
 func charge() -> void:
@@ -212,21 +287,41 @@ func attack_splash() -> void:
 	if fading or not is_instance_valid(owner_body):
 		return
 	pulse = 1.0
+	if final_boss or fist_only:
+		_burst_fists(17)
+		return
 	splash.global_position = owner_body.global_position + Vector3.UP * body_height * 0.55 + owner_body.global_basis.z * body_radius * 0.75
 	splash.global_basis = owner_body.global_basis
 	splash.restart()
-	FX.ring(get_tree().current_scene, splash.global_position, Color(aura_color.r, aura_color.g, aura_color.b, 0.65), body_radius * 1.65, owner_body.global_basis.z)
+	FX.ring(get_tree().current_scene, splash.global_position, Color(1.0, 0.32, 0.07, 0.65), body_radius * 1.65, owner_body.global_basis.z)
 
 
 func power_surge() -> void:
 	if fading or not is_instance_valid(owner_body):
 		return
 	pulse = 1.4
+	if final_boss or fist_only:
+		_burst_fists(32)
+		return
 	var origin := owner_body.global_position + Vector3.UP * 0.08
-	FX.ring(get_tree().current_scene, origin, Color(aura_color.r, aura_color.g, aura_color.b, 0.72), body_radius * 2.5)
+	FX.ring(get_tree().current_scene, origin, Color(1.0, 0.32, 0.07, 0.72), body_radius * 2.5)
 	FX.burst(get_tree().current_scene, origin + Vector3.UP * body_height * 0.35, aura_color, 48, 1.25)
 
 
 func fade_out() -> void:
 	fading = true
-	motes.emitting = false
+	if final_boss or fist_only:
+		for fist in fists:
+			(fist["cinders"] as GPUParticles3D).emitting = false
+	else:
+		motes.emitting = false
+
+
+func _burst_fists(count: int) -> void:
+	_update_fist_positions()
+	var scene := get_tree().current_scene
+	if not is_instance_valid(scene):
+		return
+	for fist in fists:
+		var anchor := fist["anchor"] as Node3D
+		FX.burst(scene, anchor.global_position, aura_color, count, 0.65)

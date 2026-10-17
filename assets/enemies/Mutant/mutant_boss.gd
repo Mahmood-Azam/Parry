@@ -42,9 +42,9 @@ func _ready() -> void:
 	boss_aura = preload("res://boss_aura.gd").new() as Node3D
 	boss_aura.name = "BossAura"
 	if get_script().resource_path.ends_with("bara_ustaad.gd"):
-		boss_aura.call("configure", Color(1.0, 0.16, 0.11), 8.6, 2.25)
+		boss_aura.call("configure", Color(0.88, 0.018, 0.045), 8.6, 2.25, true)
 	else:
-		boss_aura.call("configure", Color(0.16, 0.64, 1.0), 3.1, 1.25)
+		boss_aura.call("configure", Color(0.04, 0.35, 1.0), 3.1, 1.25, false, true)
 	add_child(boss_aura)
 
 func _import_clips() -> void:

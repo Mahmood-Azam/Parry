@@ -26,6 +26,7 @@ const SWORD_GUARD_SCRIPT = preload("res://sword_guard_pose.gd")
 const COMBAT_FX = preload("res://combat_fx.gd")
 const CONTACT_IMPACT = preload("res://combat_impact.gd")
 const HIT_PAUSE = preload("res://combat_hit_pause.gd")
+const SOUL_CINEMATIC = preload("res://soul_steal_cinematic.gd")
 const SWORD_TRAIL_SCRIPT = preload("res://sword_trail.gd")
 const GROUNDING_SCRIPT = preload("res://locomotion_grounding.gd")
 const FLAME_AURA_SCRIPT = preload("res://flame_aura.gd")
@@ -101,6 +102,9 @@ var FIRE_AIR_SLASH_SCRIPT: Script = preload("res://fire_air_slash.gd")
 @export var player_attack_stun_duration: float = 0.55
 @export var player_attack_range: float = 5.2
 @export_range(0.0, 1.0, 0.01) var player_attack_hit_fraction: float = 0.55
+@export var jump_attack_damage: float = 28.0
+@export var jump_attack_range: float = 3.6
+@export_range(0.0, 1.0, 0.01) var jump_attack_hit_fraction: float = 0.48
 @export_group("Fire Meter")
 @export var fire_meter_max: float = 100.0
 @export var fire_per_parry: float = 35.0
@@ -120,6 +124,11 @@ var FIRE_AIR_SLASH_SCRIPT: Script = preload("res://fire_air_slash.gd")
 @export var dash_invulnerability_time: float = 0.16
 @export var shadow_decoy_duration: float = 1.0
 @export var dash_buffer_time: float = 0.12
+@export_group("Soul Steal")
+@export var soul_steal_cooldown: float = 10.0
+@export var soul_steal_radius: float = 12.0
+@export var soul_steal_damage: float = 22.0
+@export var soul_steal_heal_per_hit: float = 10.0
 
 # --- Node References ---
 @onready var character: Node3D = $WarriorKnight
@@ -186,6 +195,9 @@ var hit_reaction_base_position: Vector3
 var dash_elapsed: float = 0.0
 var dash_base_scale: Vector3
 var shadow_decoy_script: Script = preload("res://shadow_decoy.gd")
+var active_shadow_decoy: Node3D
+var soul_cinematic: Node3D
+var soul_steal_cooldown_timer := 0.0
 var locomotion_phase: float = 0.0
 var locomotion_base_position: Vector3
 var jump_buffer_remaining: float = 0.0
@@ -296,6 +308,7 @@ func _ensure_input_actions() -> void:
 		"crouch": KEY_CTRL,
 		"sprint": KEY_SHIFT,
 		"dash": KEY_Q,
+		"soul_steal": KEY_C,
 		"parry": KEY_F,
 		"fill_fire": KEY_R,
 	}
@@ -722,6 +735,10 @@ func _unhandled_input(event: InputEvent) -> void:
 		var key_event := event as InputEventKey
 		if key_event.keycode == KEY_E or key_event.keycode == KEY_G:
 			ultimate_controller.try_activate("area" if key_event.keycode == KEY_E else "focused")
+			get_viewport().set_input_as_handled()
+			return
+		if key_event.is_action_pressed("soul_steal"):
+			try_start_soul_steal()
 			get_viewport().set_input_as_handled()
 			return
 		if key_event.keycode == KEY_P:
@@ -1204,6 +1221,9 @@ func _begin_attack(animation_name: String) -> void:
 		attack_combo_queued = false
 		attack_phase_hit = 0
 		animation_player.speed_scale = attack_animation_speed_scale
+	else:
+		attack_combo_phase = 0
+		attack_phase_hit = 0
 	attack_start_basis = character.global_basis
 	var motion_data: Dictionary = attack_root_motion_tracks.get(animation_name, {})
 	var source_animation: Animation = motion_data.get("animation") as Animation
@@ -1255,7 +1275,17 @@ func _update_attack_combo(_delta: float) -> void:
 
 
 func _update_player_attack_hit() -> void:
-	if not attacking or attack_combo_phase <= 0 or not animation_player.has_animation("Attack"):
+	if not attacking:
+		return
+	if animation_player.current_animation == &"JumpAttack":
+		if attack_phase_hit > 0 or not animation_player.has_animation("JumpAttack"):
+			return
+		var contact_time := animation_player.get_animation("JumpAttack").length * jump_attack_hit_fraction
+		if animation_player.current_animation_position >= contact_time:
+			attack_phase_hit = 1
+			_process_jump_attack_hit()
+		return
+	if attack_combo_phase <= 0 or not animation_player.has_animation("Attack"):
 		return
 	if attack_phase_hit == attack_combo_phase:
 		return
@@ -1281,6 +1311,14 @@ func _process_player_attack_hit() -> bool:
 	var available_fire_ratio := clampf(fire_meter / maxf(fire_attack_cost, 0.001), 0.0, 1.0)
 	var damage_from_fire := player_attack_damage * available_fire_ratio
 	var fire_to_consume := minf(fire_attack_cost, fire_meter)
+	return _deal_melee_hit(damage_from_fire, player_attack_range, fire_to_consume, "HIT")
+
+
+func _process_jump_attack_hit() -> bool:
+	return _deal_melee_hit(jump_attack_damage, jump_attack_range, 0.0, "JUMP HIT")
+
+
+func _deal_melee_hit(damage: float, attack_range: float, fire_to_consume: float, feedback: String) -> bool:
 	var hit_confirmed := false
 	for candidate in get_tree().get_nodes_in_group("enemy"):
 		if candidate == null or not is_instance_valid(candidate) or not candidate is Node3D:
@@ -1293,18 +1331,17 @@ func _process_player_attack_hit() -> bool:
 		var to_enemy := enemy_center - global_position
 		to_enemy.y = 0.0
 		var distance := to_enemy.length()
-		if distance > player_attack_range or distance < 0.01:
+		if distance > attack_range or distance < 0.01 or not enemy.has_method("take_damage"):
+			continue
+		var accepted: bool = enemy.call("take_damage", damage, self)
+		if not accepted:
 			continue
 		if enemy.has_method("apply_stun"):
 			enemy.call("apply_stun", player_attack_stun_duration)
-		if enemy.has_method("take_damage"):
-			var accepted: bool = enemy.call("take_damage", damage_from_fire, self)
-			if damage_from_fire > 0.0 and not accepted:
-				continue
 		fire_meter = maxf(fire_meter - fire_to_consume, 0.0)
 		_update_fire_blade_effect()
 		_update_combat_stats()
-		_show_combat_feedback("HIT", Color(1.0, 0.72, 0.25))
+		_show_combat_feedback(feedback, Color(1.0, 0.72, 0.25))
 		_add_camera_trauma(0.38)
 		HIT_PAUSE.request(get_tree().current_scene, 0.035)
 		hit_confirmed = true
@@ -1631,9 +1668,9 @@ func _reset_locomotion_pose(delta: float) -> void:
 	character.position = character.position.lerp(locomotion_base_position, delta * 14.0)
 
 
-func _spawn_shadow_decoy() -> void:
+func _spawn_shadow_decoy() -> Node3D:
 	if shadow_decoy_script == null or character == null or get_tree().current_scene == null:
-		return
+		return null
 	var decoy := Node3D.new()
 	decoy.name = "ShadowDecoy"
 	decoy.set_script(shadow_decoy_script)
@@ -1642,6 +1679,49 @@ func _spawn_shadow_decoy() -> void:
 	get_tree().current_scene.add_child(decoy)
 	decoy.global_position = global_position
 	decoy.global_rotation = character.global_rotation
+	active_shadow_decoy = decoy
+	return decoy
+
+
+func try_start_soul_steal() -> bool:
+	if not is_alive or is_using_ultimate or is_fire_channeling or hit_stun_remaining > 0.0 or soul_steal_cooldown_timer > 0.0:
+		return false
+	if is_instance_valid(active_shadow_decoy) and bool(active_shadow_decoy.get("soul_active")):
+		return false
+	var targets: Array[Node3D] = []
+	for candidate in get_tree().get_nodes_in_group("enemy"):
+		if not candidate is Node3D or not is_instance_valid(candidate) or not candidate.is_inside_tree():
+			continue
+		var enemy := candidate as Node3D
+		if not enemy.has_method("take_damage") or enemy.get("is_dead") == true:
+			continue
+		var delta := enemy.global_position - global_position
+		delta.y = 0.0
+		if delta.length_squared() <= soul_steal_radius * soul_steal_radius:
+			targets.append(enemy)
+	if targets.is_empty():
+		return false
+	var origin := global_position
+	targets.sort_custom(func(a: Node3D, b: Node3D) -> bool:
+		var a_delta := a.global_position - origin
+		var b_delta := b.global_position - origin
+		a_delta.y = 0.0
+		b_delta.y = 0.0
+		if is_equal_approx(a_delta.length_squared(), b_delta.length_squared()):
+			return a.get_instance_id() < b.get_instance_id()
+		return a_delta.length_squared() < b_delta.length_squared()
+	)
+	var decoy := active_shadow_decoy if is_instance_valid(active_shadow_decoy) else _spawn_shadow_decoy()
+	if decoy == null or not bool(decoy.call("begin_soul_steal", self, targets, soul_steal_damage, soul_steal_heal_per_hit)):
+		return false
+	soul_steal_cooldown_timer = soul_steal_cooldown
+	if is_instance_valid(soul_cinematic):
+		soul_cinematic.call("finish_now")
+	soul_cinematic = SOUL_CINEMATIC.new() as Node3D
+	get_tree().current_scene.add_child(soul_cinematic)
+	soul_cinematic.call("begin", self, decoy)
+	_update_combat_stats()
+	return true
 
 
 ## Directional Parry: checks if the player is facing towards the incoming attack source within parry_max_angle degrees.
@@ -1730,6 +1810,8 @@ func _die() -> void:
 	is_dashing = false
 	attacking = false
 	is_attacking = false
+	if is_instance_valid(soul_cinematic):
+		soul_cinematic.call("finish_now")
 	Engine.time_scale = 1.0
 	if character != null:
 		var death_rotation := character.rotation + Vector3(-PI * 0.5, 0.0, 0.0)
@@ -1746,6 +1828,7 @@ func _die() -> void:
 func _update_timers(delta: float) -> void:
 	dash_buffer_remaining = maxf(dash_buffer_remaining - delta, 0.0)
 	dash_cooldown_timer = maxf(dash_cooldown_timer - delta, 0.0)
+	soul_steal_cooldown_timer = maxf(soul_steal_cooldown_timer - delta, 0.0)
 	jump_buffer_remaining = maxf(jump_buffer_remaining - delta, 0.0)
 	if jump_buffer_remaining <= 0.0:
 		jump_requested = false

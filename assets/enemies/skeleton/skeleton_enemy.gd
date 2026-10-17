@@ -1,5 +1,6 @@
 extends CharacterBody3D
 const BURN_EFFECT := preload("res://enemy_burn.gd")
+const BOSS_ATTACK_AUDIO := preload("res://assets/audio/ash_warden/attack.wav")
 var burn_effect: Node3D
 
 var DEATH_SCENE: PackedScene = load("res://assets/enemies/animations/Falling Back Death.fbx")
@@ -59,6 +60,7 @@ var debug_state_label: Label3D
 var debug_body_material: StandardMaterial3D
 var debug_attack_material: StandardMaterial3D
 var attack_sound: AudioStreamPlayer
+var boss_attack_sound: AudioStreamPlayer3D
 var boss_aura: Node3D
 var attack_audio_stream: AudioStream = preload("res://assets/audio/Attack.mp3")
 var stun_pose_elapsed: float = 0.0
@@ -91,7 +93,7 @@ func _ready() -> void:
 	if is_boss:
 		boss_aura = preload("res://boss_aura.gd").new() as Node3D
 		boss_aura.name = "BossAura"
-		boss_aura.call("configure", Color(0.64, 0.28, 1.0), 1.85, 0.82)
+		boss_aura.call("configure", Color(1.0, 0.32, 0.07), 1.85, 0.82)
 		add_child(boss_aura)
 
 func _physics_process(delta: float) -> void:
@@ -191,7 +193,10 @@ func _start_strike() -> void:
 	var clip := animation_player.get_animation(&"Lesha_attack_1")
 	# Contact-to-contact cadence ~0.5s, first strike has a readable windup.
 	animation_player.speed_scale = clip.length / (0.88 if combo_step == 0 else 0.64) if three_hit_combo else attack_animation_speed_scale
-	if attack_sound != null:
+	if is_boss and boss_attack_sound != null:
+		boss_attack_sound.pitch_scale = randf_range(0.94, 1.04)
+		boss_attack_sound.play()
+	elif attack_sound != null:
 		attack_sound.play()
 	_play(&"Lesha_attack_1", true)
 	# Playing the same clip again does not rewind an already-playing animation.
@@ -499,6 +504,17 @@ func _setup_health_bar() -> void:
 
 
 func _setup_attack_audio() -> void:
+	if is_boss:
+		boss_attack_sound = AudioStreamPlayer3D.new()
+		boss_attack_sound.name = "BossAttackSound"
+		boss_attack_sound.stream = BOSS_ATTACK_AUDIO
+		boss_attack_sound.volume_db = -4.0
+		boss_attack_sound.unit_size = 5.0
+		boss_attack_sound.max_distance = 32.0
+		boss_attack_sound.max_polyphony = 3
+		boss_attack_sound.position.y = 1.25
+		add_child(boss_attack_sound)
+		return
 	# Use a global player so the cue is always audible while debugging combat.
 	# The enemy's world-space hitbox remains separate from audio attenuation.
 	attack_sound = AudioStreamPlayer.new()
