@@ -723,10 +723,6 @@ func _unhandled_input(event: InputEvent) -> void:
 			ultimate_controller.try_activate("area" if key_event.keycode == KEY_E else "focused")
 			get_viewport().set_input_as_handled()
 			return
-		if key_event.keycode == KEY_V:
-			camera_unlocked = not camera_unlocked
-			_show_combat_feedback("FREE CAMERA" if camera_unlocked else "CAMERA FOLLOW", Color(0.35, 0.8, 1.0))
-			return
 		if key_event.keycode == KEY_P:
 			_kill_all_enemies()
 			return

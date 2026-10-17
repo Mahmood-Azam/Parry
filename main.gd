@@ -21,10 +21,13 @@ var breach_script: Script
 var menu_atmosphere: Control
 var menu_theme: Theme
 var title_font: SystemFont
+var free_camera: Node3D
+var game_music: AudioStreamPlayer
 
 func _ready() -> void:
 	process_mode = Node.PROCESS_MODE_ALWAYS
 	_build_menu()
+	_setup_game_music()
 	var text_policy := preload("res://gameplay_text_policy.gd").new()
 	text_policy.name = "MinimalGameplayHUD"
 	add_child(text_policy)
@@ -66,7 +69,7 @@ func _build_menu() -> void:
 	title_background.add_child(menu_atmosphere)
 	menu_layer.add_child(overlay)
 
-	home_panel = _make_panel("SHADOWBORN", true)
+	home_panel = _make_panel("FAST: rewind", true)
 	var home_box := home_panel.get_node("Margin/VBox") as VBoxContainer
 	home_panel.add_theme_stylebox_override("panel", StyleBoxEmpty.new())
 	home_panel.set_anchors_preset(Control.PRESET_TOP_LEFT)
@@ -121,6 +124,7 @@ func _build_menu() -> void:
 	settings.add_theme_constant_override("separation", 12)
 	scroll.add_child(settings)
 	DisplaySettings.create_volume_controls(settings)
+	DisplaySettings.create_music_controls(settings)
 	DisplaySettings.create_controls(settings)
 	var quality_picker := OptionButton.new()
 	quality_picker.add_item("Performance — sparse grass")
@@ -130,6 +134,18 @@ func _build_menu() -> void:
 	quality_picker.selected = map.quality
 	quality_picker.item_selected.connect(map.apply_quality)
 	settings.add_child(quality_picker)
+	var distance_label := Label.new()
+	distance_label.text = "RENDER DISTANCE"
+	distance_label.add_theme_color_override("font_color", Color(1.0, 0.66, 0.3))
+	settings.add_child(distance_label)
+	var distance_picker := OptionButton.new()
+	distance_picker.name = "RenderDistance"
+	distance_picker.add_item("Near — best performance")
+	distance_picker.add_item("Standard")
+	distance_picker.add_item("Far")
+	distance_picker.selected = map.render_distance
+	distance_picker.item_selected.connect(map.apply_render_distance)
+	settings.add_child(distance_picker)
 	var controls_heading := Label.new()
 	controls_heading.text = "CONTROLS"
 	controls_heading.add_theme_font_size_override("font_size", 18)
@@ -137,7 +153,7 @@ func _build_menu() -> void:
 	settings.add_child(controls_heading)
 	var controls := Label.new()
 	controls.name = "ControlsReference"
-	controls.text = "WASD Move  |  Shift Sprint  |  Ctrl Crouch\nSpace Jump  |  X Jump Attack\nMouse Look  |  Scroll Wheel Zoom\nF Parry  |  RMB Parry, then hold to Block\nQ Shadow Dash  |  LMB Fire Attack\nMMB Hold: Channel Fire\nRelease MMB: Air Slash\nE Ultimate: Inferno (area blast)\nG Ultimate: Focused Strike\nO Collect Relic  |  V Free Camera\nEsc Menu  |  F11 / Alt+Enter Fullscreen\n\nFire: orange first layer, violet second layer.\nAttacks and decay spend the same reserve.\nFull violet unlocks E/G; an ultimate uses it all.\nThree amber marks: triple strike, parry all three.\n\nPractice: R Add 100 Fire  |  P Kill All"
+	controls.text = "WASD Move  |  Shift Sprint  |  Ctrl Crouch\nSpace Jump  |  X Jump Attack\nMouse Look  |  Scroll Wheel Zoom\nF Parry  |  RMB Parry, then hold to Block\nQ Shadow Dash  |  LMB Fire Attack\nMMB Hold: Channel Fire\nRelease MMB: Air Slash\nE Ultimate: Inferno (area blast)\nG Ultimate: Focused Strike\nO Collect Relic  |  V Free Camera\nFree Camera: WASD Fly  |  Space/Ctrl Up/Down\nShift Fast  |  V/Esc Return\nEsc Menu  |  F11 / Alt+Enter Fullscreen\n\nFire: orange first layer, violet second layer.\nAttacks and decay spend the same reserve.\nFull violet unlocks E/G; an ultimate uses it all.\nThree amber marks: triple strike, parry all three.\n\nPractice: R Add 100 Fire  |  P Kill All"
 	controls.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	controls.add_theme_font_size_override("font_size", 15)
 	controls.add_theme_color_override("font_color", Color(0.82, 0.87, 0.98))
@@ -246,7 +262,7 @@ func _layout_menu_panels() -> void:
 func _make_panel(title: String, left_aligned: bool = false) -> PanelContainer:
 	var panel := PanelContainer.new()
 	panel.theme = menu_theme
-	panel.name = title.replace(" ", "") + "Panel"
+	panel.name = title.replace(" ", "").replace(":", "") + "Panel"
 	panel.set_anchors_preset(Control.PRESET_CENTER_LEFT if left_aligned else Control.PRESET_CENTER)
 	panel.position = Vector2(46.0, -220.0) if left_aligned else Vector2(-190.0, -220.0)
 	panel.size = Vector2(420.0, 440.0) if left_aligned else Vector2(380.0, 440.0)
@@ -359,6 +375,7 @@ func _add_button(parent: VBoxContainer, label: String, callback: Callable) -> vo
 
 
 func _set_menu_visible(panel: Control) -> void:
+	_close_free_camera(false)
 	# Pause first so the frame that reveals the menu cannot advance gameplay.
 	get_tree().paused = true
 	_set_gameplay_process_enabled(false)
@@ -402,7 +419,20 @@ func _input(event: InputEvent) -> void:
 			opening_intro.finish()
 			get_viewport().set_input_as_handled()
 		return
+	if event is InputEventKey and event.pressed and not event.echo and event.keycode == KEY_V:
+		if is_instance_valid(free_camera):
+			_close_free_camera()
+		elif session_started and not get_tree().paused and not is_instance_valid(ending_intro):
+			var player := get_node("Player")
+			if player.is_alive and not player.is_using_ultimate and get_viewport().get_camera_3d() == player.camera:
+				_open_free_camera()
+		get_viewport().set_input_as_handled()
+		return
 	if event is InputEventKey and event.pressed and not event.echo and event.keycode == KEY_ESCAPE:
+		if is_instance_valid(free_camera):
+			_close_free_camera()
+			get_viewport().set_input_as_handled()
+			return
 		if get_tree().paused:
 			if options_panel.visible:
 				_show_home()
@@ -438,6 +468,7 @@ func show_death_screen(delay: float = 0.72) -> void:
 func _continue_game() -> void:
 	if is_instance_valid(opening_intro) or is_instance_valid(ending_intro) or opening_loading:
 		return
+	_close_free_camera(false)
 	session_started = true
 	_ensure_breach_world()
 	_set_gameplay_process_enabled(true)
@@ -474,6 +505,7 @@ func _ending_finished() -> void:
 func _new_game() -> void:
 	if opening_loading or is_instance_valid(opening_intro):
 		return
+	_close_free_camera(false)
 	if not session_started:
 		_start_new_game_intro()
 		return
@@ -505,6 +537,7 @@ func _start_new_game_intro() -> void:
 
 
 func _respawn() -> void:
+	_close_free_camera(false)
 	get_tree().root.set_meta(START_GAME_META, true)
 	get_tree().paused = false
 	get_tree().reload_current_scene()
@@ -512,6 +545,41 @@ func _respawn() -> void:
 
 func _quit_game() -> void:
 	get_tree().quit()
+
+
+func _setup_game_music() -> void:
+	game_music = AudioStreamPlayer.new()
+	game_music.name = "GameMusic"
+	game_music.process_mode = Node.PROCESS_MODE_ALWAYS
+	game_music.stream = preload("res://assets/audio/fast_rewind_score.wav")
+	game_music.volume_db = linear_to_db(maxf(DisplaySettings.get_music_volume(), 0.0001))
+	game_music.finished.connect(game_music.play)
+	DisplaySettings.music_volume_changed.connect(_set_music_volume)
+	add_child(game_music)
+	game_music.play()
+
+
+func _set_music_volume(percent: float) -> void:
+	game_music.volume_db = linear_to_db(maxf(percent / 100.0, 0.0001))
+	game_music.stream_paused = percent <= 0.0
+
+
+func _open_free_camera() -> void:
+	free_camera = preload("res://free_camera.gd").new()
+	free_camera.name = "FreeCameraMode"
+	add_child(free_camera)
+	free_camera.call("begin", get_viewport().get_camera_3d())
+	get_tree().paused = true
+
+
+func _close_free_camera(resume: bool = true) -> void:
+	if not is_instance_valid(free_camera):
+		return
+	free_camera.call("finish")
+	free_camera.queue_free()
+	free_camera = null
+	if resume:
+		get_tree().paused = false
 
 
 func _ensure_breach_world() -> void:

@@ -60,6 +60,8 @@ var boss_title: Label
 var boss: CharacterBody3D
 var mutant: CharacterBody3D
 var bara: CharacterBody3D
+var rooftop_mages: Array[CharacterBody3D] = []
+var rooftop_mage_timer: Timer
 var arrival: Node3D
 var player: CharacterBody3D
 var ui_clock: float = 0.0
@@ -513,16 +515,56 @@ func _insert_relics() -> void:
 	_update_hud()
 
 func _bara_landed(_actor: CharacterBody3D) -> void:
+	rooftop_mage_timer = Timer.new()
+	rooftop_mage_timer.name = "RooftopMageReinforcements"
+	rooftop_mage_timer.wait_time = 7.0
+	rooftop_mage_timer.one_shot = true
+	rooftop_mage_timer.timeout.connect(_spawn_rooftop_mages)
+	add_child(rooftop_mage_timer)
+	_spawn_rooftop_mages()
 	_set_marker(_actor.global_position, "BARA USTAAD")
 	message_label.text = "BARA USTAAD"
 	message_label.show()
 	_hide_message_after(2.5, message_label.text)
 	_update_hud()
 
+func _spawn_rooftop_mages() -> void:
+	if relic_phase != PHASE_FINAL_BOSS or not is_instance_valid(bara) or bara.is_dead or not player.is_alive:
+		return
+	rooftop_mages = rooftop_mages.filter(func(mage: CharacterBody3D) -> bool: return is_instance_valid(mage) and not mage.is_dead)
+	if not rooftop_mages.is_empty():
+		return
+	for offset in [Vector3(-2.5, 0.0, -3.0), Vector3(2.5, 0.0, -3.0)]:
+		var mage := MAGE.instantiate() as CharacterBody3D
+		mage.name = "RooftopMage%d" % (rooftop_mages.size() + 1)
+		mage.position = _actor_roof_position() + offset
+		mage.aggro_range = 16.0
+		mage.leash_range = 20.0
+		mage.process_mode = Node.PROCESS_MODE_PAUSABLE
+		get_parent().add_child(mage)
+		mage.died.connect(_rooftop_mage_defeated)
+		rooftop_mages.append(mage)
+
+func _actor_roof_position() -> Vector3:
+	return Vector3(48.2, 6.55, -85.3)
+
+func _rooftop_mage_defeated() -> void:
+	if relic_phase != PHASE_FINAL_BOSS:
+		return
+	rooftop_mages = rooftop_mages.filter(func(mage: CharacterBody3D) -> bool: return is_instance_valid(mage) and not mage.is_dead)
+	if rooftop_mages.is_empty() and is_instance_valid(rooftop_mage_timer):
+		rooftop_mage_timer.start()
+
 func _bara_defeated() -> void:
 	if relic_phase != PHASE_FINAL_BOSS:
 		return
 	relic_phase = PHASE_COMPLETE
+	if is_instance_valid(rooftop_mage_timer):
+		rooftop_mage_timer.stop()
+	for mage in rooftop_mages:
+		if is_instance_valid(mage):
+			mage.queue_free()
+	rooftop_mages.clear()
 	completed = true
 	_clear_marker()
 	boss_bar.hide()

@@ -25,7 +25,7 @@ func _suppress(node: Node) -> void:
 	var ancestor := node
 	while ancestor != get_parent():
 		# Opening story presentation and front-end menus are not the gameplay HUD.
-		if ancestor.name in [&"PlayerStatusHUD", &"ObjectiveWaypoint", &"FrontEndLayer", &"OpeningCinematic", &"EndingCinematic", &"OwlDialogueLayer", &"CampusMap"] or node.name in [&"RelicPickupPrompt", &"BossTitle", &"EncounterMessage"]:
+		if ancestor.name in [&"PlayerStatusHUD", &"ObjectiveWaypoint", &"FreeCameraMode", &"FrontEndLayer", &"OpeningCinematic", &"EndingCinematic", &"OwlDialogueLayer", &"CampusMap"] or node.name in [&"RelicPickupPrompt", &"BossTitle", &"EncounterMessage"]:
 			return
 		ancestor = ancestor.get_parent()
 	if node is Label or node is RichTextLabel:

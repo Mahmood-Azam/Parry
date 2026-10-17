@@ -1,11 +1,16 @@
 extends Node3D
 ## Rendering-only changes: all building and terrain collisions stay intact.
 var quality: int = 0
+var render_distance: int = 1
 var vegetation: Array[MultiMeshInstance3D] = []
 var original_multimeshes: Array[MultiMesh] = []
 var foliage_chunks: Array[MultiMeshInstance3D] = []
+var foliage_base_ranges: Array[float] = []
 var surface_materials: Array[ShaderMaterial] = []
 var environment: Environment
+var world_environment: WorldEnvironment
+var fog_check_clock := 0.0
+var outdoor_fog := true
 var source_instances: int = 0
 var rendered_instances: int = 0
 var batched_mesh_count: int = 0
@@ -47,6 +52,7 @@ func _ready() -> void:
 				surface_materials.append(surface_material)
 	_batch_static_boxes(static_bins)
 	for node in find_children("*", "WorldEnvironment", true, false):
+		world_environment = node
 		environment = node.environment.duplicate(true)
 		node.environment = environment
 		_setup_night()
@@ -65,6 +71,22 @@ func _ready() -> void:
 	var config := ConfigFile.new()
 	config.load("user://shadowborn_graphics.cfg")
 	apply_quality(int(config.get_value("graphics", "quality", 0)), false)
+	apply_render_distance(int(config.get_value("graphics", "render_distance", 1)), false)
+
+
+func _process(delta: float) -> void:
+	if not is_instance_valid(world_environment) or world_environment.environment != environment:
+		return # The ending swaps to its own daylight environment.
+	fog_check_clock -= delta
+	if fog_check_clock <= 0.0:
+		fog_check_clock = 0.35
+		var camera := get_viewport().get_camera_3d()
+		if camera != null:
+			var start := camera.global_position
+			var query := PhysicsRayQueryParameters3D.create(start, start + Vector3.UP * 35.0, 1)
+			outdoor_fog = get_world_3d().direct_space_state.intersect_ray(query).is_empty()
+	var target := 0.009 if outdoor_fog else 0.0015
+	environment.fog_density = lerpf(environment.fog_density, target, 1.0 - exp(-1.8 * delta))
 
 func _batch_static_boxes(bins: Dictionary) -> void:
 	# Repeated walls, frames, desks and trim become instanced draw calls. Their
@@ -107,7 +129,7 @@ func _setup_night() -> void:
 	environment.fog_enabled = true
 	environment.fog_light_color = Color(0.035, 0.052, 0.085)
 	environment.fog_light_energy = 0.7
-	environment.fog_density = 0.006
+	environment.fog_density = 0.009
 	environment.tonemap_mode = Environment.TONE_MAPPER_FILMIC
 	environment.glow_enabled = true
 	environment.glow_intensity = 0.65
@@ -142,6 +164,7 @@ func apply_quality(value: int, save: bool = true) -> void:
 		chunk.hide()
 		chunk.queue_free()
 	foliage_chunks.clear()
+	foliage_base_ranges.clear()
 	for index in vegetation.size():
 		var node := vegetation[index]
 		var source := original_multimeshes[index]
@@ -180,10 +203,12 @@ func apply_quality(value: int, save: bool = true) -> void:
 			chunk.material_override = node.material_override
 			chunk.transform = node.transform * Transform3D(Basis.IDENTITY, center)
 			chunk.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
-			chunk.visibility_range_end = ranges[quality] if is_grass else ranges[quality] * 2.0
+			var base_range: float = ranges[quality] if is_grass else ranges[quality] * 2.0
+			chunk.visibility_range_end = base_range
 			chunk.visibility_range_end_margin = 4.0
 			node.get_parent().add_child(chunk)
 			foliage_chunks.append(chunk)
+			foliage_base_ranges.append(base_range)
 			rendered_instances += reduced.instance_count
 		node.hide()
 	for material in surface_materials:
@@ -193,7 +218,29 @@ func apply_quality(value: int, save: bool = true) -> void:
 		environment.ssao_enabled = quality > 0
 		environment.ssao_intensity = 1.1
 	get_viewport().msaa_3d = Viewport.MSAA_DISABLED if quality == 0 else Viewport.MSAA_2X
+	apply_render_distance(render_distance, false)
 	if save:
 		var config := ConfigFile.new()
+		config.load("user://shadowborn_graphics.cfg")
 		config.set_value("graphics", "quality", quality)
+		config.save("user://shadowborn_graphics.cfg")
+
+
+func apply_render_distance(value: int, save: bool = true) -> void:
+	render_distance = clampi(value, 0, 2)
+	var multiplier: float = [0.65, 1.0, 1.5][render_distance]
+	for index in static_visuals.size():
+		var extent := static_extents[index]
+		var base_range := 160.0
+		if extent < 1.0:
+			base_range = [35.0, 45.0, 55.0][quality]
+		elif extent < 3.0:
+			base_range = [50.0, 55.0, 55.0][quality]
+		static_visuals[index].visibility_range_end = base_range * multiplier
+	for index in foliage_chunks.size():
+		foliage_chunks[index].visibility_range_end = foliage_base_ranges[index] * multiplier
+	if save:
+		var config := ConfigFile.new()
+		config.load("user://shadowborn_graphics.cfg")
+		config.set_value("graphics", "render_distance", render_distance)
 		config.save("user://shadowborn_graphics.cfg")

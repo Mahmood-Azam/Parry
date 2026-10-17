@@ -5,6 +5,7 @@ extends Node
 signal fullscreen_changed(enabled: bool)
 signal resolution_changed(description: String)
 signal master_volume_changed(percent: float)
+signal music_volume_changed(percent: float)
 
 const SETTINGS_PATH := "user://shadowborn_settings.cfg"
 const BASE_SIZE := Vector2i(1280, 720)
@@ -23,6 +24,7 @@ var _changing_mode := false
 var _windowed_mode: Window.Mode = Window.MODE_WINDOWED
 var _reported_fullscreen := false
 var _master_volume := 1.0
+var _music_volume := 0.4
 var _volume_save_timer: Timer
 var _volume_dirty := false
 
@@ -47,6 +49,9 @@ func _ready() -> void:
 	var saved_volume: Variant = _config.get_value("audio", "master_volume", 1.0)
 	if (saved_volume is float or saved_volume is int) and is_finite(float(saved_volume)):
 		_master_volume = clampf(float(saved_volume), 0.0, 1.0)
+	var saved_music: Variant = _config.get_value("audio", "music_volume", 0.4)
+	if (saved_music is float or saved_music is int) and is_finite(float(saved_music)):
+		_music_volume = clampf(float(saved_music), 0.0, 1.0)
 	_apply_master_volume()
 	_volume_save_timer = Timer.new()
 	_volume_save_timer.name = "VolumeSaveTimer"
@@ -83,6 +88,23 @@ func get_fullscreen() -> bool:
 
 func get_master_volume() -> float:
 	return _master_volume
+
+
+func get_music_volume() -> float:
+	return _music_volume
+
+
+func set_music_volume(value: float) -> void:
+	if not is_finite(value):
+		return
+	value = clampf(value, 0.0, 1.0)
+	if is_equal_approx(value, _music_volume):
+		return
+	_music_volume = value
+	_config.set_value("audio", "music_volume", _music_volume)
+	_volume_dirty = true
+	_volume_save_timer.start()
+	music_volume_changed.emit(_music_volume * 100.0)
 
 
 func set_master_volume(value: float) -> void:
@@ -155,6 +177,34 @@ func create_volume_controls(parent: VBoxContainer) -> void:
 	master_volume_changed.connect(slider.set_value)
 	if _master_volume <= 0.0:
 		label.text = "MASTER VOLUME  MUTED"
+
+
+func create_music_controls(parent: VBoxContainer) -> void:
+	var row := VBoxContainer.new()
+	row.name = "MusicSettingsControls"
+	parent.add_child(row)
+	var label := Label.new()
+	label.name = "MusicVolumeLabel"
+	label.text = "GAME MUSIC  %d%%" % roundi(_music_volume * 100.0)
+	label.add_theme_color_override("font_color", Color(1.0, 0.66, 0.3))
+	row.add_child(label)
+	var slider := HSlider.new()
+	slider.name = "MusicVolume"
+	slider.min_value = 0.0
+	slider.max_value = 100.0
+	slider.step = 1.0
+	slider.value = _music_volume * 100.0
+	slider.custom_minimum_size.y = 28.0
+	slider.tooltip_text = "Adjust only the cinematic game music."
+	row.add_child(slider)
+	slider.value_changed.connect(func(percent: float):
+		label.text = "GAME MUSIC  %d%%" % roundi(percent) if percent > 0 else "GAME MUSIC  MUTED"
+		set_music_volume(percent / 100.0)
+	)
+	slider.drag_ended.connect(func(_changed: bool): _save_volume())
+	music_volume_changed.connect(slider.set_value)
+	if _music_volume <= 0.0:
+		label.text = "GAME MUSIC  MUTED"
 
 
 func _native_fullscreen() -> bool:
