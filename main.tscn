@@ -1,6 +1,7 @@
 [gd_scene format=3]
 
 [ext_resource type="Script" path="res://player_controller.gd" id="1_0xm2m"]
+[ext_resource type="Script" path="res://main.gd" id="5_main"]
 [ext_resource type="PackedScene" path="res://assets/animations/Lite Sword and Shield Pack/Knight D Pelegrini.fbx" id="2_1bvp3"]
 [ext_resource type="Script" path="res://assets/enemies/skeleton/skeleton_enemy.gd" id="3_1bvp3"]
 [ext_resource type="PackedScene" path="res://assets/enemies/skeleton/skeleton_-_low_tier_enemy.glb" id="4_lquwl"]
@@ -25,6 +26,7 @@ radius = 0.35
 height = 1.7
 
 [node name="Main" type="Node3D" unique_id=97730360]
+script = ExtResource("5_main")
 
 [node name="DirectionalLight3D" type="DirectionalLight3D" parent="." unique_id=1928618000]
 transform = Transform3D(0.8191522, 0.40557957, -0.4055797, 0, 0.7071069, 0.70710665, 0.5735762, -0.5792279, 0.57922816, 0, 0, 0)
@@ -63,7 +65,7 @@ fov = 58.0
 [node name="WarriorKnight" parent="Player" unique_id=1797102545 instance=ExtResource("2_1bvp3")]
 
 [node name="SkeletonEnemy" type="CharacterBody3D" parent="." unique_id=1119615305]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, -4)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, -6)
 script = ExtResource("3_1bvp3")
 
 [node name="SkeletonModel" parent="SkeletonEnemy" unique_id=2023616911 instance=ExtResource("4_lquwl")]
