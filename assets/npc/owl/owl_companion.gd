@@ -271,6 +271,16 @@ func _unlock_player() -> void:
 	_end_story_camera()
 	if not is_instance_valid(player):
 		return
+	if player is CharacterBody3D:
+		var actor_animation := player.get_node_or_null("WarriorKnight/AnimationPlayer") as AnimationPlayer
+		if actor_animation != null and actor_animation.has_animation("Idle"):
+			actor_animation.speed_scale = 1.0
+			player.set("last_animation", "")
+			player.call("_play", "Idle")
+		var character := player.get_node_or_null("WarriorKnight") as Node3D
+		if character != null:
+			character.rotation.x = 0.0
+			character.rotation.z = 0.0
 	player.set_physics_process(saved_physics)
 	player.set_process_input(saved_input)
 	player.set_process_unhandled_input(saved_unhandled)

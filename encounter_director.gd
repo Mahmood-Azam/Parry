@@ -281,6 +281,7 @@ func _build_hud() -> void:
 	canvas.add_child(pickup_prompt)
 	pickup_prompt.hide()
 	message_label = Label.new()
+	message_label.name = "EncounterMessage"
 	message_label.set_anchors_and_offsets_preset(Control.PRESET_CENTER_TOP)
 	message_label.position = Vector2(-320, 100)
 	message_label.size = Vector2(640, 80)
@@ -302,6 +303,7 @@ func _build_hud() -> void:
 	boss_bar.fill_tint = Color(0.85, 0.19, 0.055)
 	canvas.add_child(boss_bar)
 	boss_title = Label.new()
+	boss_title.name = "BossTitle"
 	boss_title.set_anchors_and_offsets_preset(Control.PRESET_CENTER_BOTTOM)
 	boss_title.position = Vector2(-190, -128)
 	boss_title.size.x = 380

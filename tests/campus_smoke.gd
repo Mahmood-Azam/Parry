@@ -14,6 +14,8 @@ func run() -> void:
 	var map := scene.get_node("CampusMap")
 	var director := scene.get_node("EncounterDirector")
 	var player := scene.get_node("Player") as CharacterBody3D
+	var classroom_sign := map.find_child("Sign C-101", true, false) as Label3D
+	assert(classroom_sign != null and classroom_sign.transparency < 0.01, "Classroom names must remain visible")
 	print("QUALITY ",map.quality," vegetation ",map.source_instances," -> ",map.rendered_instances," materials=",map.surface_materials.size())
 	print("BATCHES ", map.batched_mesh_count, " -> ",map.batch_count, " chunks=",map.foliage_chunks.size())
 	assert(map.rendered_instances < map.source_instances * 0.4)
@@ -80,6 +82,20 @@ func run() -> void:
 		director.owl.call("_process", seconds)
 	director.owl.call("_process", 0.65)
 	assert(director.owl.get("intro_seen"))
+	assert(player.is_physics_processing(), "Owl story must restore player movement")
+	Input.action_press("move_left")
+	var left_direction: Vector3 = player._movement_input().normalized()
+	for frame in 24:
+		await physics_frame
+	assert(player.animation_player.current_animation in ["Walk", "Run"], "Movement animation must resume after Owl dialogue")
+	assert(player.character.global_basis.z.dot(left_direction) > 0.6, "Player must turn toward leftward travel")
+	Input.action_release("move_left")
+	Input.action_press("move_right")
+	var right_direction: Vector3 = player._movement_input().normalized()
+	for frame in 24:
+		await physics_frame
+	assert(player.character.global_basis.z.dot(right_direction) > 0.6, "Player must turn toward rightward travel")
+	Input.action_release("move_right")
 	player.global_position = director.relic.global_position + Vector3.DOWN * 0.8
 	var collect_key := InputEventKey.new()
 	collect_key.keycode = KEY_O
@@ -123,6 +139,7 @@ func run() -> void:
 	mutant_camera.make_current()
 	director._update_hud()
 	assert(director.boss_bar.visible and director.boss_title.text.contains("MUTANT"))
+	assert(director.boss_title.self_modulate.a > 0.99, "Boss names must remain visible")
 	assert(not director.boss_bar.get_global_rect().intersects(player.fire_meter_bar.get_global_rect()), "Boss bar must not overlap the shared fire meter")
 	await create_timer(0.15).timeout
 	await capture("merged_mutant_hall")

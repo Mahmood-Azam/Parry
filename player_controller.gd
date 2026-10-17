@@ -1084,13 +1084,25 @@ func _compensate_step_camera(height: float) -> void:
 
 
 func _face_camera_direction(delta: float) -> void:
-	if camera_unlocked or camera_pivot == null or character == null:
+	if camera_pivot == null or character == null:
+		return
+	if camera_unlocked:
+		if not attacking and not blocking and not is_parrying and not is_dashing and not is_fire_channeling and is_on_floor():
+			var travel := _movement_input()
+			if travel.length_squared() > 0.01:
+				character.rotation.y = rotate_toward(character.rotation.y, atan2(travel.x, travel.z), turn_speed * delta)
 		return
 	var camera_forward := -camera_pivot.global_transform.basis.z
 	camera_forward.y = 0.0
 	if camera_forward.length_squared() < 0.001:
 		return
-	var target_yaw := atan2(camera_forward.x, camera_forward.z)
+	var facing := camera_forward.normalized()
+	if not attacking and not blocking and not is_parrying and not is_dashing and not is_fire_channeling and is_on_floor():
+		var travel := _movement_input()
+		travel.y = 0.0
+		if travel.length_squared() > 0.01:
+			facing = travel.normalized()
+	var target_yaw := atan2(facing.x, facing.z)
 	character.rotation.y = rotate_toward(character.rotation.y, target_yaw, turn_speed * delta)
 
 
