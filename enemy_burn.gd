@@ -112,7 +112,10 @@ func _physics_process(delta: float) -> void:
 		var amount := tick_elapsed * damage_per_second
 		tick_elapsed = 0.0
 		var source: Node = attacker.get_ref() if attacker else null
-		enemy.take_damage(amount, source)
+		if enemy.has_method("take_burn_damage"):
+			enemy.take_burn_damage(amount, source)
+		else:
+			enemy.take_damage(amount, source)
 	if remaining <= 0.0 or enemy.is_dead:
 		_extinguish()
 

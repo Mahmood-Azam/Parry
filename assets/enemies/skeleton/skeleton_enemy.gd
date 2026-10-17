@@ -174,8 +174,8 @@ func apply_stun(duration: float = -1.0) -> void:
 	var requested_duration := default_parry_stun_duration if duration < 0.0 else duration
 	stun_remaining = maxf(stun_remaining, requested_duration)
 	stun_pose_elapsed = 0.0
-	stun_pose_base_rotation = skeleton_model.rotation
-	stun_pose_base_position = skeleton_model.position
+	# Repeated hits during a stun must not turn the temporary sway into the
+	# next resting pose; that accumulated tilt made the Ash Warden lean sideways.
 	is_attacking = false
 	attack_has_hit = true
 	velocity.x = 0.0

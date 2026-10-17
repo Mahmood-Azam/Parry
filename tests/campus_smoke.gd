@@ -40,7 +40,17 @@ func run() -> void:
 			assert(director.boss.is_boss)
 			director.boss.take_damage(230.0, player)
 			assert(director.boss.enraged)
+			var resting_rotation: Vector3 = director.boss.stun_pose_base_rotation
+			director.boss.apply_stun()
+			director.boss.stun_pose_elapsed = 0.08
+			director.boss._update_stun_pose()
+			director.boss.apply_stun()
+			assert(director.boss.stun_pose_base_rotation.is_equal_approx(resting_rotation), "Repeated stuns must not tilt the Ash Warden")
+			director.boss.stun_remaining = 0.01
+			director.boss.set_physics_process(true)
 			await create_timer(0.1).timeout
+			director.boss.set_physics_process(false)
+			assert(director.boss.skeleton_model.rotation.is_equal_approx(resting_rotation), "Ash Warden must return to its upright pose")
 			await capture("night_boss")
 		for enemy in get_nodes_in_group("enemy"):
 			enemy.take_damage(99999.0, player)
@@ -64,6 +74,14 @@ func run() -> void:
 	assert(director.mutant.animation_player.has_animation("Jump"))
 	assert(director.mutant.animation_player.has_animation("Punch"))
 	assert(director.mutant.animation_player.has_animation("Walk"))
+	assert(director.mutant.global_position.is_equal_approx(director.get_parent().get_node(director.RELIC_ROOM_PATH).to_global(director.MUTANT_LOCAL)))
+	assert(is_equal_approx(director.gremlin_wave_timer.wait_time, 10.0) and not director.gremlin_wave_timer.is_stopped())
+	assert(director.gremlins.is_empty(), "Gremlins should first arrive ten seconds after the Mutant")
+	director._spawn_gremlin_wave()
+	assert(director.gremlins.size() == 2)
+	for gremlin in director.gremlins:
+		assert(gremlin.is_in_group("enemy") and gremlin.animation_player.has_animation("Lesha_attack_1"))
+		gremlin.set_physics_process(false)
 	# Check the actual new hallway scene, with room-space placement intact.
 	director.mutant.engaged = true
 	director.mutant.set_physics_process(false)
@@ -87,7 +105,10 @@ func run() -> void:
 	await capture("merged_mutant_hall_flex")
 	director.mutant.take_damage(999999.0, player)
 	assert(director.completed and director.relic_phase == 3)
+	assert(director.gremlin_wave_timer.is_stopped() and director.gremlins.is_empty())
 	assert(director.mutant.animation_player.current_animation == "Death")
+	assert(is_instance_valid(director.owl) and director.owl.get("state") == "orbit")
+	assert(not player.is_physics_processing())
 	print("PASS progression, relic pickup, Mutant clips, flex, death, and P shortcut")
 	scene._new_game()
 	await create_timer(0.3, true).timeout
