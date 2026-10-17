@@ -528,12 +528,38 @@ func _start_last_boss_test() -> void:
 	_continue_game()
 	var player := get_node("Player") as CharacterBody3D
 	var director := get_node("EncounterDirector")
-	player.global_position = breach_world.gate_point + Vector3(0.0, 0.1, 1.0)
+	player.global_position = _find_clear_boss_test_spawn(player)
 	player.velocity = Vector3.ZERO
+	player.reset_physics_interpolation()
 	director.relic_count = 3
 	director.relic_phase = director.PHASE_PORTAL
 	director.stage = director.STAGES.size() - 1
 	director._insert_relics()
+
+
+func _find_clear_boss_test_spawn(player: CharacterBody3D) -> Vector3:
+	var collider := player.get_node("CollisionShape3D") as CollisionShape3D
+	var candidates := [
+		Vector3(53.0, 6.56, -95.0),
+		Vector3(43.0, 6.56, -93.0),
+		Vector3(53.0, 6.56, -99.0),
+		Vector3(43.0, 6.56, -98.0),
+	]
+	for candidate: Vector3 in candidates:
+		var floor_ray := PhysicsRayQueryParameters3D.create(candidate + Vector3.UP * 2.0, candidate + Vector3.DOWN * 2.0, 1)
+		var floor_hit := get_world_3d().direct_space_state.intersect_ray(floor_ray)
+		if floor_hit.is_empty() or absf(floor_hit.position.y - candidate.y) > 0.45 or floor_hit.normal.y < 0.75:
+			continue
+		var position: Vector3 = floor_hit.position + Vector3.UP * 0.08
+		var clearance := PhysicsShapeQueryParameters3D.new()
+		clearance.shape = collider.shape
+		clearance.transform = Transform3D(Basis.IDENTITY, position + collider.position)
+		clearance.collision_mask = 1
+		clearance.exclude = [player.get_rid()]
+		if get_world_3d().direct_space_state.intersect_shape(clearance, 1).is_empty():
+			return position
+	push_warning("No fully clear rooftop test spawn found")
+	return Vector3(53.0, 6.7, -95.0)
 
 func _start_new_game_intro() -> void:
 	if opening_loading:
