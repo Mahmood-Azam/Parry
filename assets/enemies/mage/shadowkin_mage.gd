@@ -16,6 +16,9 @@ signal projectile_fired(projectile: Node3D)
 @export var windup_duration := 0.85
 @export var move_speed := 1.8
 @export var preferred_distance := 5.5
+@export var aggro_range := 11.0
+@export var leash_range := 16.0
+var awareness := preload("res://enemy_awareness.gd").new()
 var attack_timer := 0.9
 var current_health := 85.0
 var is_dead := false
@@ -36,6 +39,9 @@ var gravity: float = ProjectSettings.get_setting("physics/3d/default_gravity")
 @onready var model: Node3D = $MageModel
 
 func _ready() -> void:
+	awareness.home = global_position
+	awareness.aggro_range = aggro_range
+	awareness.leash_range = leash_range
 	process_mode = Node.PROCESS_MODE_PAUSABLE
 	add_to_group("enemy")
 	add_to_group("mage")
@@ -71,6 +77,12 @@ func _physics_process(delta: float) -> void:
 	stun_remaining = maxf(stun_remaining - delta, 0.0)
 	target = _preferred_target()
 	var movement := Vector3.ZERO
+	if not awareness.can_engage(self, target):
+		if is_attacking:
+			_cancel_cast()
+		target = null
+		if stun_remaining <= 0.0:
+			movement = awareness.return_direction(self) * move_speed
 	if stun_remaining <= 0.0 and is_instance_valid(target):
 		var to_target := target.global_position - global_position
 		to_target.y = 0.0
@@ -91,7 +103,7 @@ func _physics_process(delta: float) -> void:
 			if distance <= attack_range and clear and attack_timer <= 0.0:
 				_begin_cast(target)
 			elif distance > preferred_distance or not clear:
-				movement = to_target.normalized() * move_speed
+				movement = awareness.pursuit_direction(self, to_target.normalized()) * move_speed
 			elif distance < 2.5:
 				movement = -to_target.normalized() * move_speed * 0.5
 	elif is_attacking:
@@ -204,18 +216,14 @@ func _die() -> void:
 func _setup_health_bar() -> void:
 	health_layer = CanvasLayer.new()
 	add_child(health_layer)
-	health_bar = ProgressBar.new()
+	health_bar = preload("res://combat_health_bar.gd").new()
 	health_bar.show_percentage = false
 	health_bar.max_value = max_health
 	health_bar.value = current_health
-	health_bar.size = Vector2(105, 10)
+	health_bar.bar_height = 4.0
+	health_bar.size = Vector2(48, 4)
 	health_bar.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	var fill := StyleBoxFlat.new()
-	fill.bg_color = Color(0.6, 0.1, 0.8)
-	var background := StyleBoxFlat.new()
-	background.bg_color = Color(0.04, 0.02, 0.07, 0.9)
-	health_bar.add_theme_stylebox_override("fill", fill)
-	health_bar.add_theme_stylebox_override("background", background)
+	health_bar.fill_tint = Color(0.63, 0.16, 0.78)
 	health_layer.add_child(health_bar)
 
 func _process(_delta: float) -> void:
@@ -225,4 +233,4 @@ func _process(_delta: float) -> void:
 	var center := global_position + Vector3.UP * 2.28
 	health_bar.visible = camera != null and not camera.is_position_behind(center) and camera.global_position.distance_to(center) < 22.0
 	if health_bar.visible:
-		health_bar.position = camera.unproject_position(center) - Vector2(52.5, 0)
+		health_bar.position = camera.unproject_position(center) - Vector2(24, 0)

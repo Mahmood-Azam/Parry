@@ -1,9 +1,11 @@
 # Ultimates
 
-Earn two fire bars' worth of parry fire (200 at the default meter size) to
-bank one ultimate. Progress is separate from spendable blade fire and does
-not decay. Parry fire still counts when the blade meter is already full.
-The two segments at the bottom of the screen show the banked charge.
+Fire and ultimate now share one spendable reserve (0–200 by default).
+One compact track fills orange from 0–100, then violet fills over it from
+100–200. Full violet pulses gently and unlocks the ultimate. There is no
+separate bank: melee hits, charged slashes and passive decay all reduce
+ultimate progress too. Fully filling either layer briefly protects it from
+passive decay; spending fire ends that protection.
 
 - **E — Inferno:** a 10 m area blast, 110 direct damage with distance falloff,
   followed by burning and stun. Level geometry blocks damage.
@@ -11,10 +13,10 @@ The two segments at the bottom of the screen show the banked charge.
   Face a visible enemy within 16 m. Bosses ahead are prioritized. No target
   means no charge is spent. Nearby enemies take no collateral damage.
 
-Both consume the same banked ultimate and play a short cinematic with a
+Both consume the entire shared fire reserve and play a short cinematic with a
 blade windup, fire aura, release effects and camera recovery. The player is
 protected and other combat actors freeze during the cinematic. Escape/menu
-pause still works. Normal blade fire is retained.
+pause still works. No blade fire is retained after activation.
 
 For practice, **R twice** also charges one ultimate. New Game/respawn resets
 the reserve. Cannot activate in midair, during hit stun, a dash, a melee

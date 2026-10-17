@@ -23,6 +23,18 @@ var DEATH_SCENE: PackedScene = load("res://assets/enemies/animations/Falling Bac
 @export var death_dissolve_duration: float = 1.35
 @export var is_boss: bool = false
 var enraged: bool = false
+@export var aggro_range: float = 10.0
+@export var leash_range: float = 16.0
+@export var three_hit_combo: bool = true
+@export_range(0.0, 1.0) var triple_attack_chance := 0.45
+@export var close_attack_recovery := 0.90 ## Breathing room between patterns; strike cadence stays unchanged.
+var combo_length := 1
+var awareness := preload("res://enemy_awareness.gd").new()
+var combo_step := 0
+var combo_parries := 0
+var last_parried_step := -1
+var combo_victim: WeakRef
+var combo_hint: HBoxContainer
 
 @onready var player_target: Node3D = get_node_or_null("../Player") as Node3D
 @onready var animation_player: AnimationPlayer = $SkeletonModel/AnimationPlayer
@@ -55,6 +67,11 @@ signal health_changed(current: float, maximum: float)
 signal died()
 
 func _ready() -> void:
+	awareness.home = global_position
+	awareness.aggro_range = aggro_range
+	awareness.leash_range = leash_range
+	# Derived creatures keep their own attack patterns.
+	three_hit_combo = three_hit_combo and not is_boss and get_script().resource_path == "res://assets/enemies/skeleton/skeleton_enemy.gd"
 	current_health = max_health
 	add_to_group("enemy")
 	target = player_target
@@ -91,7 +108,11 @@ func _physics_process(delta: float) -> void:
 			skeleton_model.position = stun_pose_base_position
 		return
 
-	target = _get_preferred_target()
+	if not is_attacking or not is_instance_valid(target):
+		target = _get_preferred_target()
+	if not is_attacking and not awareness.can_engage(self, target):
+		_return_home(delta)
+		return
 	if target == null or not is_instance_valid(target):
 		velocity.x = move_toward(velocity.x, 0.0, stopping_friction * delta)
 		velocity.z = move_toward(velocity.z, 0.0, stopping_friction * delta)
@@ -108,14 +129,15 @@ func _physics_process(delta: float) -> void:
 	var facing_target := false
 	if distance > 0.05:
 		var desired_yaw := atan2(to_target.x, to_target.z)
-		rotation.y = rotate_toward(rotation.y, desired_yaw, turn_speed * delta)
+		if not is_attacking or not attack_has_hit:
+			rotation.y = rotate_toward(rotation.y, desired_yaw, turn_speed * delta)
 		facing_target = global_transform.basis.z.dot(to_target.normalized()) >= cos(deg_to_rad(attack_alignment_angle))
 
 	# Once a swing starts, finish the attack animation even if the player dashes
 	# out of range. Only an idle enemy should abandon pursuit for distance.
 	if distance > attack_range and not is_attacking:
 		is_attacking = false
-		var direction := to_target.normalized()
+		var direction := awareness.pursuit_direction(self, to_target.normalized())
 		velocity.x = move_toward(velocity.x, direction.x * move_speed, movement_acceleration * delta)
 		velocity.z = move_toward(velocity.z, direction.z * move_speed, movement_acceleration * delta)
 		_play(&"Lesha_walk")
@@ -124,14 +146,11 @@ func _physics_process(delta: float) -> void:
 		velocity.z = move_toward(velocity.z, 0.0, stopping_friction * delta)
 		if is_attacking:
 			_process_attack_hit()
-		if not is_attacking and attack_timer <= 0.0 and facing_target:
-			is_attacking = true
-			attack_has_hit = false
-			attack_timer = attack_cooldown
-			animation_player.speed_scale = attack_animation_speed_scale
-			if attack_sound != null:
-				attack_sound.play()
-			_play(&"Lesha_attack_1", true)
+			# Trim the long recovery tail, but never skip the visible contact.
+			if three_hit_combo and animation_player.current_animation_position >= animation_player.current_animation_length * 0.78:
+				_finish_combo_strike()
+		if not is_attacking and attack_timer <= 0.0 and facing_target and _target_in_sight():
+			_begin_combo()
 		elif not is_attacking:
 			_play(&"Lesha_idle")
 
@@ -148,10 +167,81 @@ func _play(animation_name: StringName, restart: bool = false) -> void:
 		current_animation = animation_name
 		animation_player.play(animation_name, 0.1)
 
+func _begin_combo() -> void:
+	combo_step = 0
+	combo_parries = 0
+	last_parried_step = -1
+	combo_victim = null
+	combo_length = 3 if three_hit_combo and randf() < triple_attack_chance else 1
+	_start_strike()
+
+func _start_strike() -> void:
+	is_attacking = true
+	attack_has_hit = false
+	attack_timer = attack_cooldown
+	var clip := animation_player.get_animation(&"Lesha_attack_1")
+	# Contact-to-contact cadence ~0.5s, first strike has a readable windup.
+	animation_player.speed_scale = clip.length / (0.88 if combo_step == 0 else 0.64) if three_hit_combo else attack_animation_speed_scale
+	if attack_sound != null:
+		attack_sound.play()
+	_play(&"Lesha_attack_1", true)
+	# Playing the same clip again does not rewind an already-playing animation.
+	animation_player.seek(0.0, true)
+
+func _finish_combo_strike() -> void:
+	if not is_attacking:
+		return
+	if three_hit_combo and combo_step < combo_length - 1:
+		combo_step += 1
+		_start_strike()
+	else:
+		is_attacking = false
+		attack_has_hit = false
+		animation_player.speed_scale = 1.0
+		attack_timer = close_attack_recovery if three_hit_combo else attack_cooldown
+		current_animation = &""
+		_play(&"Lesha_idle")
+
+## Returns true when the combo owns the parry response (no full stun mid-chain).
+func on_parried(defender: Node, _perfect: bool) -> bool:
+	if not three_hit_combo or combo_length != 3 or is_dead or not is_attacking:
+		return false
+	if last_parried_step == combo_step:
+		return true
+	attack_has_hit = true
+	last_parried_step = combo_step
+	if combo_victim != null and combo_victim.get_ref() != defender:
+		combo_parries = 0
+	combo_victim = weakref(defender)
+	combo_parries += 1
+	_spawn_stun_effect()
+	if combo_step == 2 and combo_parries == 3:
+		apply_burn(1.4, 1.0, 1.0, defender)
+		take_damage(current_health, defender)
+		if defender.has_method("_show_combat_feedback"):
+			defender.call("_show_combat_feedback", "TRIPLE PARRY — INCINERATED", Color(1, 0.55, 0.12))
+	return true
+
+func _return_home(delta: float) -> void:
+	var direction := awareness.return_direction(self)
+	velocity.x = move_toward(velocity.x, direction.x * move_speed, movement_acceleration * delta)
+	velocity.z = move_toward(velocity.z, direction.z * move_speed, movement_acceleration * delta)
+	velocity.y = 0.0 if is_on_floor() else velocity.y - gravity * delta
+	animation_player.speed_scale = 1.0
+	if direction.length_squared() > 0.01:
+		rotation.y = rotate_toward(rotation.y, atan2(direction.x, direction.z), turn_speed * delta)
+		_play(&"Lesha_walk")
+	else:
+		_play(&"Lesha_idle")
+	move_and_slide()
+
 func _on_animation_finished(animation_name: StringName) -> void:
 	if animation_name == &"FallingDeath":
 		return
 	if animation_name == &"Lesha_attack_1":
+		if three_hit_combo:
+			_finish_combo_strike()
+			return
 		is_attacking = false
 		attack_has_hit = false
 		animation_player.speed_scale = 1.0
@@ -178,6 +268,9 @@ func apply_stun(duration: float = -1.0) -> void:
 	# next resting pose; that accumulated tilt made the Ash Warden lean sideways.
 	is_attacking = false
 	attack_has_hit = true
+	if three_hit_combo:
+		# The stun already provides a punish window; do not add another long wait.
+		attack_timer = minf(attack_timer, close_attack_recovery)
 	velocity.x = 0.0
 	velocity.z = 0.0
 	animation_player.speed_scale = 1.0
@@ -235,6 +328,8 @@ func _update_stun_pose() -> void:
 ## reliable even when physics and animation advance on different frames.
 func is_attack_in_parry_window() -> bool:
 	if not is_attacking or attack_has_hit or current_animation != &"Lesha_attack_1":
+		return false
+	if not _target_in_sight():
 		return false
 	var attack_animation := animation_player.get_animation(&"Lesha_attack_1")
 	if attack_animation == null or attack_animation.length <= 0.0:
@@ -368,27 +463,26 @@ func _setup_health_bar() -> void:
 	health_bar_layer = CanvasLayer.new()
 	health_bar_layer.name = "EnemyHealthBarLayer"
 	add_child(health_bar_layer)
-	health_bar = ProgressBar.new()
+	health_bar = preload("res://combat_health_bar.gd").new()
 	health_bar.name = "EnemyHealthBar"
 	health_bar.show_percentage = false
 	health_bar.max_value = max_health
 	health_bar.value = current_health
-	health_bar.size = Vector2(110.0, 12.0)
-	var background := StyleBoxFlat.new()
-	background.bg_color = Color(0.04, 0.04, 0.05, 0.9)
-	background.corner_radius_top_left = 3
-	background.corner_radius_top_right = 3
-	background.corner_radius_bottom_left = 3
-	background.corner_radius_bottom_right = 3
-	var fill := StyleBoxFlat.new()
-	fill.bg_color = Color(0.75, 0.08, 0.1, 0.95)
-	fill.corner_radius_top_left = 3
-	fill.corner_radius_top_right = 3
-	fill.corner_radius_bottom_left = 3
-	fill.corner_radius_bottom_right = 3
-	health_bar.add_theme_stylebox_override("background", background)
-	health_bar.add_theme_stylebox_override("fill", fill)
+	health_bar.bar_height = 4.0
+	health_bar.size = Vector2(48.0, 4.0)
 	health_bar_layer.add_child(health_bar)
+	if three_hit_combo:
+		combo_hint = HBoxContainer.new()
+		combo_hint.position = Vector2(16.5, 7)
+		combo_hint.add_theme_constant_override("separation", 3)
+		combo_hint.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		for index in 3:
+			var pip := ColorRect.new()
+			pip.custom_minimum_size = Vector2(3, 2)
+			pip.color = Color(0.8, 0.49, 0.19, 0.7)
+			pip.mouse_filter = Control.MOUSE_FILTER_IGNORE
+			combo_hint.add_child(pip)
+		health_bar.add_child(combo_hint)
 
 
 func _setup_attack_audio() -> void:
@@ -415,6 +509,10 @@ func _process(_delta: float) -> void:
 			debug_state_label.visible = false
 		return
 	_update_debug_hitboxes()
+	if combo_hint != null:
+		combo_hint.visible = is_attacking and combo_length == 3
+		for index in 3:
+			combo_hint.get_child(index).color = Color(1, 0.85, 0.3) if index < combo_parries else Color(0.8, 0.49, 0.19, 0.7)
 	if health_bar == null:
 		return
 	if is_boss:
@@ -425,8 +523,8 @@ func _process(_delta: float) -> void:
 		health_bar.visible = false
 		return
 	var screen_position := camera.unproject_position(global_position + Vector3.UP * 2.2)
-	health_bar.position = screen_position - Vector2(55.0, 6.0)
-	health_bar.visible = not is_on_floor() or camera.is_position_in_frustum(global_position)
+	health_bar.position = screen_position - Vector2(24.0, 2.0)
+	health_bar.visible = not camera.is_position_behind(global_position) and camera.is_position_in_frustum(global_position) and camera.global_position.distance_to(global_position) < 25.0
 
 
 func _setup_debug_hitboxes() -> void:
@@ -527,8 +625,13 @@ func _process_attack_hit() -> void:
 	if animation_player.current_animation_position < attack_animation.length * attack_hit_time:
 		return
 	attack_has_hit = true
-	var distance := global_position.distance_to(_get_target_center())
-	if distance > attack_range + attack_hit_range_padding:
+	var center := _get_target_center()
+	var offset := center - global_position
+	var distance := Vector2(offset.x, offset.z).length()
+	if distance > attack_range + attack_hit_range_padding or absf(offset.y - 0.9) > 1.4:
+		return
+	var sight := PhysicsRayQueryParameters3D.create(global_position + Vector3.UP, center, 1)
+	if not get_world_3d().direct_space_state.intersect_ray(sight).is_empty():
 		return
 	if target.has_method("take_damage"):
 		target.call("take_damage", attack_damage, self, "melee", {
@@ -544,6 +647,12 @@ func _get_target_center() -> Vector3:
 	if target_collider != null:
 		return target.to_global(target_collider.position)
 	return target.global_position + Vector3.UP * 0.9
+
+func _target_in_sight() -> bool:
+	if not is_instance_valid(target):
+		return false
+	var ray := PhysicsRayQueryParameters3D.create(global_position + Vector3.UP, _get_target_center(), 1)
+	return get_world_3d().direct_space_state.intersect_ray(ray).is_empty()
 
 
 func _get_preferred_target() -> Node3D:

@@ -93,13 +93,13 @@ func run() -> void:
 	player.fire_full_hold_remaining = 0.0
 	player.fire_was_full = true
 	player._update_passive_fire(20.0)
-	check(player.fire_meter == 0.0 and ult.charge == 100.0, "Normal fire decay must preserve ultimate progress")
-	player._add_fire_meter(100.0)
+	check(player.fire_meter == 0.0 and ult.charge == 0.0, "Fire decay also spends ultimate progress from the same reserve")
+	player._add_fire_meter(200.0)
 	check(ult.is_ready(), "Two bars earned through fire gain must unlock ultimate")
 	player._add_fire_meter(200.0)
 	check(ult.charge == 200.0, "Reserve must cap at one ultimate")
 	check(not ult.try_activate("focused") and ult.is_ready(), "No focused target must not consume ultimate")
-	print("PASS two-bar banking, persistence, cap and no-target protection")
+	print("PASS shared layered reserve, decay, cap and no-target protection")
 	var near := spawn_enemy(Vector3(0, 0, -4))
 	var beside := spawn_enemy(Vector3(3, 0, -5))
 	var distant := spawn_enemy(Vector3(0, 0, -14))

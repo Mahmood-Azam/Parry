@@ -8,6 +8,20 @@ var channel_blend := 0.0
 var stance_time := 0.0
 var release_remaining := 0.0
 var release_blend := 0.0
+const PARRY_DURATION := 0.32
+var parry_elapsed := PARRY_DURATION
+var parry_side := -1.0
+var parry_strength := 1.0
+
+func play_parry(perfect: bool = false) -> void:
+	# Alternate the actual hand/arm deflection, not the sword's socket transform.
+	parry_side = -parry_side
+	parry_elapsed = 0.0
+	parry_strength = 1.15 if perfect else 1.0
+	influence = maxf(influence, 0.75)
+
+func parry_motion() -> float:
+	return smoothstep(0.0, 0.055, parry_elapsed) * (1.0 - smoothstep(0.065, PARRY_DURATION, parry_elapsed)) * parry_strength
 
 
 func play_release() -> void:
@@ -27,15 +41,18 @@ func _ready() -> void:
 
 
 func _process(delta: float) -> void:
+	parry_elapsed = minf(parry_elapsed + delta, PARRY_DURATION)
 	release_remaining = maxf(release_remaining - delta, 0.0)
 	if release_remaining <= 0.0:
 		release_blend = move_toward(release_blend, 0.0, delta / 0.18)
 	var channeling: bool = is_instance_valid(controller) and (controller.is_fire_channeling or controller.ultimate_charging)
 	channel_blend = move_toward(channel_blend, 1.0 if channeling else 0.0, delta / 0.20)
 	stance_time += delta
-	var allowed: bool = (guard_active or channeling or release_remaining > 0.0) and is_instance_valid(controller)
+	var allowed: bool = (guard_active or channeling or release_remaining > 0.0 or parry_elapsed < PARRY_DURATION) and is_instance_valid(controller)
 	if allowed:
 		allowed = controller.is_alive and not controller.attacking and not controller.is_dashing and controller.hit_stun_remaining <= 0.0
+		if not allowed:
+			parry_elapsed = PARRY_DURATION
 	influence = move_toward(influence, 1.0 if allowed else 0.0, delta / 0.18)
 
 
@@ -50,6 +67,8 @@ func _process_modification() -> void:
 	# This model faces +Z. Raise the hilt below the right shoulder and angle
 	# the blade across the torso, with the left palm bracing its upper flat.
 	var blade_axis := Vector3(0.84, 0.54, 0.0).normalized()
+	var deflection := parry_motion()
+	blade_axis = blade_axis.rotated(Vector3.FORWARD, parry_side * deflection * 0.30).rotated(Vector3.RIGHT, -deflection * 0.12)
 	var charged_axis := Vector3(-0.16, 0.96, 0.22).normalized()
 	var released_axis := Vector3(0.72, -0.25, 0.65).normalized()
 	if controller.is_using_ultimate:
@@ -68,6 +87,7 @@ func _process_modification() -> void:
 	var fingers := palm_normal.cross(blade_axis).normalized()
 	var right_basis := Basis(blade_axis, fingers, blade_axis.cross(fingers)).orthonormalized()
 	var right_wrist := chest + Vector3(-0.24, -0.22, 0.38)
+	right_wrist += Vector3(parry_side * 0.075, 0.025, 0.055) * deflection
 	right_wrist = right_wrist.lerp(chest + Vector3(-0.08, -0.08 + sin(stance_time * 3.5) * 0.008, 0.24), channel_blend)
 	if release_blend > 0.0:
 		right_wrist = right_wrist.lerp(chest + Vector3(-0.08, -0.08, 0.24).lerp(Vector3(-0.04, -0.22, 0.40), release_progress), release_blend)

@@ -1,5 +1,5 @@
 extends Node
-## Two bars of earned fire are banked independently of spendable blade fire.
+## Ultimate access is a view of the same reserve used by attacks and decay.
 const CINEMATIC := preload("res://ultimate_cinematic.gd")
 const FX := preload("res://combat_fx.gd")
 signal charge_changed(charge: float, maximum: float)
@@ -9,7 +9,13 @@ signal ultimate_finished(kind: String)
 @export var area_damage := 110.0
 @export var focused_damage := 340.0
 @export var focused_range := 16.0
-var charge := 0.0
+var charge: float:
+	get:
+		return player.fire_meter if is_instance_valid(player) else 0.0
+	set(amount):
+		if is_instance_valid(player):
+			player.fire_meter = clampf(amount, 0.0, maximum_charge())
+var last_charge := -1.0
 var player: CharacterBody3D
 var cinematic: Node3D
 var hud: CanvasLayer
@@ -33,7 +39,7 @@ func add_fire(amount: float) -> void:
 	if amount <= 0.0 or not player.is_alive or player.is_using_ultimate:
 		return
 	var was_ready := is_ready()
-	charge = minf(charge + amount, maximum_charge())
+	player._add_fire_meter(amount)
 	charge_changed.emit(charge, maximum_charge())
 	_refresh_hud()
 	if is_ready() and not was_ready:
@@ -113,63 +119,20 @@ func _on_cinematic_finished(kind: String) -> void:
 	ultimate_finished.emit(kind)
 
 func _process(_delta: float) -> void:
-	hud.visible = player.is_alive and not player.is_using_ultimate
+	var current := charge
+	if not is_equal_approx(current, last_charge):
+		last_charge = current
+		charge_changed.emit(current, maximum_charge())
+	hud.visible = false # The player owns the single shared layered meter.
+
 
 func _build_hud() -> void:
+	# Retained as a lifecycle hook for cinematics; no second on-screen meter.
 	hud = CanvasLayer.new()
 	hud.name = "UltimateHUD"
-	hud.layer = 5
 	add_child(hud)
-	var panel := PanelContainer.new()
-	panel.set_anchors_and_offsets_preset(Control.PRESET_CENTER_BOTTOM)
-	panel.position = Vector2(-230, -100)
-	panel.size = Vector2(460, 82)
-	panel.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	var style := StyleBoxFlat.new()
-	style.bg_color = Color(0.025, 0.018, 0.025, 0.84)
-	style.border_color = Color(0.6, 0.25, 0.06)
-	style.set_border_width_all(1)
-	style.content_margin_left = 14
-	style.content_margin_right = 14
-	style.content_margin_top = 8
-	style.content_margin_bottom = 8
-	panel.add_theme_stylebox_override("panel", style)
-	hud.add_child(panel)
-	var box := VBoxContainer.new()
-	box.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	panel.add_child(box)
-	title = Label.new()
-	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	title.add_theme_font_size_override("font_size", 16)
-	title.add_theme_color_override("font_color", Color(1, 0.73, 0.3))
-	box.add_child(title)
-	var row := HBoxContainer.new()
-	row.add_theme_constant_override("separation", 6)
-	box.add_child(row)
-	for index in 2:
-		var bar := ProgressBar.new()
-		bar.custom_minimum_size.y = 9
-		bar.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-		bar.show_percentage = false
-		bar.mouse_filter = Control.MOUSE_FILTER_IGNORE
-		var background := StyleBoxFlat.new()
-		background.bg_color = Color(0.12, 0.08, 0.1)
-		var fill := StyleBoxFlat.new()
-		fill.bg_color = Color(1, 0.34, 0.045) if index == 0 else Color(1, 0.8, 0.24)
-		bar.add_theme_stylebox_override("background", background)
-		bar.add_theme_stylebox_override("fill", fill)
-		row.add_child(bar)
-		bars.append(bar)
-	hint = Label.new()
-	hint.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	hint.add_theme_font_size_override("font_size", 13)
-	hint.add_theme_color_override("font_color", Color(0.8, 0.76, 0.72))
-	box.add_child(hint)
+	hud.hide()
+
 
 func _refresh_hud() -> void:
-	var bar_size := maximum_charge() * 0.5
-	for index in bars.size():
-		bars[index].max_value = bar_size
-		bars[index].value = clampf(charge - float(index) * bar_size, 0.0, bar_size)
-	title.text = "ULTIMATE READY" if is_ready() else "ULTIMATE  —  %d / 2 FIRE BARS" % mini(floori(charge / bar_size), 2)
-	hint.text = "[E] INFERNO (AOE)     |     [G] ASH EXECUTION (FOCUSED)" if is_ready() else "Parry to bank two bars of fire. Stored progress does not decay."
+	player._update_combat_stats()

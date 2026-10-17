@@ -14,6 +14,7 @@ var embers: GPUParticles3D
 var material: ShaderMaterial
 var glow: OmniLight3D
 var extinguished: bool = false
+var death_linger := 0.0
 
 func _ready() -> void:
 	process_mode = Node.PROCESS_MODE_PAUSABLE
@@ -103,7 +104,9 @@ func ignite(duration: float, dps: float, power: float, source: Node) -> void:
 func _physics_process(delta: float) -> void:
 	var enemy := get_parent()
 	if enemy.is_dead:
-		_extinguish()
+		# Keep the execution flame visible while the corpse dissolves.
+		death_linger = 0.85
+		set_physics_process(false)
 		return
 	var step := minf(delta, remaining)
 	remaining = maxf(remaining - step, 0.0)
@@ -120,6 +123,12 @@ func _physics_process(delta: float) -> void:
 		_extinguish()
 
 func _process(delta: float) -> void:
+	if death_linger > 0.0:
+		death_linger = maxf(death_linger - delta, 0.0)
+		remaining = death_linger
+		if death_linger <= 0.0:
+			_extinguish()
+			return
 	elapsed += delta
 	material.set_shader_parameter("effect_time", elapsed)
 	var strength := clampf(remaining / 0.6, 0.0, 1.0)

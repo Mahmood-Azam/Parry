@@ -11,16 +11,26 @@ var death_request_id: int = 0
 var breach_world: Node3D
 var opening_intro: Node3D
 const START_GAME_META := "shadowborn_start_game"
+const BREACH_RESOURCE := "res://breach_world.gd"
+var session_started := false
+var opening_loading := false
+var loading_label: Label
+var breach_script: Script
 
 func _ready() -> void:
 	process_mode = Node.PROCESS_MODE_ALWAYS
 	_build_menu()
+	var text_policy := preload("res://gameplay_text_policy.gd").new()
+	text_policy.name = "MinimalGameplayHUD"
+	add_child(text_policy)
+	# Load the large cinematic dependencies while the title screen is visible.
+	ResourceLoader.load_threaded_request(BREACH_RESOURCE, "Script", true)
 	if get_tree().root.has_meta(START_GAME_META):
 		var start_mode: Variant = get_tree().root.get_meta(START_GAME_META)
 		get_tree().root.remove_meta(START_GAME_META)
 		if start_mode is String and start_mode == "intro":
 			_show_home()
-			_begin_opening.call_deferred()
+			_start_new_game_intro.call_deferred()
 		else:
 			_continue_game()
 	else:
@@ -97,7 +107,7 @@ func _build_menu() -> void:
 	settings.add_child(controls_heading)
 	var controls := Label.new()
 	controls.name = "ControlsReference"
-	controls.text = "WASD Move  |  Shift Sprint  |  Ctrl Crouch\nSpace Jump  |  X Jump Attack\nMouse Look  |  Scroll Wheel Zoom\nF Parry  |  RMB Parry, then hold to Block\nQ Shadow Dash  |  LMB Fire Attack\nMMB Hold: Channel Fire\nRelease MMB: Air Slash\nE Ultimate: Inferno (area blast)\nG Ultimate: Focused Strike\nO Collect Relic  |  V Free Camera\nEsc Menu  |  F11 / Alt+Enter Fullscreen\n\nPractice: R Fill Fire  |  P Kill All\nBank two fire bars to unlock an ultimate.\nR twice also charges it for practice."
+	controls.text = "WASD Move  |  Shift Sprint  |  Ctrl Crouch\nSpace Jump  |  X Jump Attack\nMouse Look  |  Scroll Wheel Zoom\nF Parry  |  RMB Parry, then hold to Block\nQ Shadow Dash  |  LMB Fire Attack\nMMB Hold: Channel Fire\nRelease MMB: Air Slash\nE Ultimate: Inferno (area blast)\nG Ultimate: Focused Strike\nO Collect Relic  |  V Free Camera\nEsc Menu  |  F11 / Alt+Enter Fullscreen\n\nFire: orange first layer, violet second layer.\nAttacks and decay spend the same reserve.\nFull violet unlocks E/G; an ultimate uses it all.\nThree amber marks: triple strike, parry all three.\n\nPractice: R Add 100 Fire  |  P Kill All"
 	controls.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	controls.add_theme_font_size_override("font_size", 15)
 	controls.add_theme_color_override("font_color", Color(0.82, 0.87, 0.98))
@@ -230,6 +240,8 @@ func _show_options() -> void:
 
 
 func _input(event: InputEvent) -> void:
+	if opening_loading:
+		return
 	if is_instance_valid(opening_intro):
 		if event is InputEventKey and event.pressed and not event.echo and event.keycode in [KEY_ESCAPE, KEY_SPACE, KEY_ENTER]:
 			opening_intro.finish()
@@ -269,8 +281,9 @@ func show_death_screen(delay: float = 0.72) -> void:
 
 
 func _continue_game() -> void:
-	if is_instance_valid(opening_intro):
+	if is_instance_valid(opening_intro) or opening_loading:
 		return
+	session_started = true
 	_ensure_breach_world()
 	_set_gameplay_process_enabled(true)
 	get_tree().paused = false
@@ -284,9 +297,36 @@ func _continue_game() -> void:
 
 
 func _new_game() -> void:
+	if opening_loading or is_instance_valid(opening_intro):
+		return
+	if not session_started:
+		_start_new_game_intro()
+		return
 	get_tree().root.set_meta(START_GAME_META, "intro")
 	get_tree().paused = false
 	get_tree().reload_current_scene()
+
+func _start_new_game_intro() -> void:
+	if opening_loading:
+		return
+	opening_loading = true
+	loading_label = Label.new()
+	loading_label.text = "ENTERING THE BREACH…"
+	loading_label.position = Vector2(48, 650)
+	loading_label.add_theme_color_override("font_color", Color(1, 0.65, 0.3))
+	menu_layer.add_child(loading_label)
+	# Paint feedback before constructing the cinematic nodes on the main thread.
+	await get_tree().process_frame
+	if DisplayServer.get_name() != "headless":
+		await RenderingServer.frame_post_draw
+	while ResourceLoader.load_threaded_get_status(BREACH_RESOURCE) == ResourceLoader.THREAD_LOAD_IN_PROGRESS:
+		await get_tree().process_frame
+	if ResourceLoader.load_threaded_get_status(BREACH_RESOURCE) == ResourceLoader.THREAD_LOAD_LOADED:
+		breach_script = ResourceLoader.load_threaded_get(BREACH_RESOURCE)
+	loading_label.queue_free()
+	opening_loading = false
+	session_started = true
+	_begin_opening()
 
 
 func _respawn() -> void:
@@ -304,7 +344,7 @@ func _ensure_breach_world() -> void:
 		return
 	breach_world = Node3D.new()
 	breach_world.name = "ShadowBreach"
-	breach_world.set_script(load("res://breach_world.gd"))
+	breach_world.set_script(breach_script if breach_script != null else load(BREACH_RESOURCE))
 	add_child(breach_world)
 
 

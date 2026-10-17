@@ -238,21 +238,20 @@ func _build_hud() -> void:
 	message_label.add_theme_constant_override("shadow_offset_y", 2)
 	canvas.add_child(message_label)
 	message_label.hide()
-	boss_bar = ProgressBar.new()
+	boss_bar = preload("res://combat_health_bar.gd").new()
+	boss_bar.bar_height = 6.0
 	boss_bar.set_anchors_and_offsets_preset(Control.PRESET_CENTER_BOTTOM)
-	boss_bar.position = Vector2(-260, -150)
-	boss_bar.size = Vector2(520, 16)
+	boss_bar.position = Vector2(-140, -65)
+	boss_bar.size = Vector2(280, 6)
 	boss_bar.show_percentage = false
-	var fill := StyleBoxFlat.new()
-	fill.bg_color = Color(0.85, 0.19, 0.055)
-	boss_bar.add_theme_stylebox_override("fill", fill)
+	boss_bar.fill_tint = Color(0.85, 0.19, 0.055)
 	canvas.add_child(boss_bar)
 	boss_title = Label.new()
 	boss_title.set_anchors_and_offsets_preset(Control.PRESET_CENTER_BOTTOM)
-	boss_title.position = Vector2(-260, -182)
-	boss_title.size.x = 520
+	boss_title.position = Vector2(-190, -128)
+	boss_title.size.x = 380
 	boss_title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	boss_title.add_theme_font_size_override("font_size", 23)
+	boss_title.add_theme_font_size_override("font_size", 18)
 	canvas.add_child(boss_title)
 	boss_bar.hide()
 	boss_title.hide()
