@@ -247,6 +247,7 @@ func take_damage(amount: float, _attacker: Node = null) -> bool:
 	if is_dead or current_health <= 0.0 or amount <= 0.0:
 		return false
 	current_health = clampf(current_health - amount, 0.0, max_health)
+	preload("res://combat_impact.gd").hit(self, _attacker, amount)
 	if is_boss and not enraged and current_health > 0.0 and current_health <= max_health * 0.5:
 		enraged = true
 		move_speed *= 1.2

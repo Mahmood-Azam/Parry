@@ -8,14 +8,21 @@ var options_panel: PanelContainer
 var death_panel: PanelContainer
 var victory_panel: PanelContainer
 var death_request_id: int = 0
+var breach_world: Node3D
+var opening_intro: Node3D
 const START_GAME_META := "shadowborn_start_game"
 
 func _ready() -> void:
 	process_mode = Node.PROCESS_MODE_ALWAYS
 	_build_menu()
 	if get_tree().root.has_meta(START_GAME_META):
+		var start_mode: Variant = get_tree().root.get_meta(START_GAME_META)
 		get_tree().root.remove_meta(START_GAME_META)
-		_continue_game()
+		if start_mode is String and start_mode == "intro":
+			_show_home()
+			_begin_opening.call_deferred()
+		else:
+			_continue_game()
 	else:
 		_show_home()
 
@@ -56,17 +63,25 @@ func _build_menu() -> void:
 	menu_layer.add_child(home_panel)
 
 	options_panel = _make_panel("OPTIONS", true)
-	options_panel.position = Vector2(46.0, -305.0)
-	options_panel.size = Vector2(450.0, 610.0)
+	options_panel.set_anchors_and_offsets_preset(Control.PRESET_LEFT_WIDE)
+	options_panel.offset_left = 46.0
+	options_panel.offset_right = 546.0
+	options_panel.offset_top = 24.0
+	options_panel.offset_bottom = -24.0
 	var options_box := options_panel.get_node("Margin/VBox") as VBoxContainer
-	var controls := Label.new()
-	controls.text = "WASD Move  |  SHIFT Sprint  |  SPACE Jump\nF / RMB Parry, then Block  |  Q Shadow Dash\nLMB Fire Attack  |  MMB Hold: Channel Fire\nRelease MMB: Air Slash  |  R Refill Fire\nE Ultimate: Inferno (large area blast)\nG Ultimate: Ash Execution (focused strike)\nO Collect Relic\nBank two bars of parry fire to unlock an ultimate.\nR twice also charges it for practice."
-	controls.add_theme_font_size_override("font_size", 18)
-	controls.add_theme_color_override("font_color", Color(0.82, 0.87, 0.98))
-	options_box.add_child(controls)
-	controls.add_theme_font_size_override("font_size", 14)
-	options_box.add_theme_constant_override("separation", 8)
-	DisplaySettings.create_controls(options_box)
+	options_box.add_theme_constant_override("separation", 12)
+	var scroll := ScrollContainer.new()
+	scroll.name = "SettingsScroll"
+	scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	options_box.add_child(scroll)
+	var settings := VBoxContainer.new()
+	settings.name = "Settings"
+	settings.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	settings.add_theme_constant_override("separation", 12)
+	scroll.add_child(settings)
+	DisplaySettings.create_volume_controls(settings)
+	DisplaySettings.create_controls(settings)
 	var quality_picker := OptionButton.new()
 	quality_picker.add_item("Performance — sparse grass")
 	quality_picker.add_item("Balanced")
@@ -74,7 +89,19 @@ func _build_menu() -> void:
 	var map := get_node("CampusMap")
 	quality_picker.selected = map.quality
 	quality_picker.item_selected.connect(map.apply_quality)
-	options_box.add_child(quality_picker)
+	settings.add_child(quality_picker)
+	var controls_heading := Label.new()
+	controls_heading.text = "CONTROLS"
+	controls_heading.add_theme_font_size_override("font_size", 18)
+	controls_heading.add_theme_color_override("font_color", Color(1.0, 0.66, 0.3))
+	settings.add_child(controls_heading)
+	var controls := Label.new()
+	controls.name = "ControlsReference"
+	controls.text = "WASD Move  |  Shift Sprint  |  Ctrl Crouch\nSpace Jump  |  X Jump Attack\nMouse Look  |  Scroll Wheel Zoom\nF Parry  |  RMB Parry, then hold to Block\nQ Shadow Dash  |  LMB Fire Attack\nMMB Hold: Channel Fire\nRelease MMB: Air Slash\nE Ultimate: Inferno (area blast)\nG Ultimate: Focused Strike\nO Collect Relic  |  V Free Camera\nEsc Menu  |  F11 / Alt+Enter Fullscreen\n\nPractice: R Fill Fire  |  P Kill All\nBank two fire bars to unlock an ultimate.\nR twice also charges it for practice."
+	controls.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	controls.add_theme_font_size_override("font_size", 15)
+	controls.add_theme_color_override("font_color", Color(0.82, 0.87, 0.98))
+	settings.add_child(controls)
 	_add_button(options_box, "BACK", Callable(self, "_show_home"))
 	menu_layer.add_child(options_panel)
 
@@ -203,6 +230,11 @@ func _show_options() -> void:
 
 
 func _input(event: InputEvent) -> void:
+	if is_instance_valid(opening_intro):
+		if event is InputEventKey and event.pressed and not event.echo and event.keycode in [KEY_ESCAPE, KEY_SPACE, KEY_ENTER]:
+			opening_intro.finish()
+			get_viewport().set_input_as_handled()
+		return
 	if event is InputEventKey and event.pressed and not event.echo and event.keycode == KEY_ESCAPE:
 		if get_tree().paused:
 			if options_panel.visible:
@@ -237,6 +269,9 @@ func show_death_screen(delay: float = 0.72) -> void:
 
 
 func _continue_game() -> void:
+	if is_instance_valid(opening_intro):
+		return
+	_ensure_breach_world()
 	_set_gameplay_process_enabled(true)
 	get_tree().paused = false
 	title_background.visible = false
@@ -249,7 +284,7 @@ func _continue_game() -> void:
 
 
 func _new_game() -> void:
-	get_tree().root.set_meta(START_GAME_META, true)
+	get_tree().root.set_meta(START_GAME_META, "intro")
 	get_tree().paused = false
 	get_tree().reload_current_scene()
 
@@ -262,3 +297,34 @@ func _respawn() -> void:
 
 func _quit_game() -> void:
 	get_tree().quit()
+
+
+func _ensure_breach_world() -> void:
+	if is_instance_valid(breach_world):
+		return
+	breach_world = Node3D.new()
+	breach_world.name = "ShadowBreach"
+	breach_world.set_script(load("res://breach_world.gd"))
+	add_child(breach_world)
+
+
+func _begin_opening() -> void:
+	if is_instance_valid(opening_intro):
+		return
+	_ensure_breach_world()
+	for panel in [home_panel, options_panel, death_panel, victory_panel, title_background, overlay]:
+		panel.hide()
+	_set_gameplay_process_enabled(false)
+	get_tree().paused = false
+	opening_intro = Node3D.new()
+	opening_intro.name = "OpeningCinematic"
+	opening_intro.set_script(load("res://breach_intro.gd"))
+	opening_intro.player = get_node("Player")
+	opening_intro.world = breach_world
+	opening_intro.finished.connect(_opening_finished)
+	add_child(opening_intro)
+
+
+func _opening_finished() -> void:
+	opening_intro = null
+	_continue_game()
