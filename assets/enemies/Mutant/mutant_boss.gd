@@ -25,6 +25,10 @@ var attack_kind: StringName = &""
 @onready var punch_sound: AudioStreamPlayer3D = $PunchSound
 
 func _ready() -> void:
+	awareness.home = global_position
+	awareness.aggro_range = 9.0
+	awareness.leash_range = leash_range
+	three_hit_combo = false
 	current_health = max_health
 	is_boss = true
 	add_to_group("enemy")
@@ -84,6 +88,19 @@ func _physics_process(delta: float) -> void:
 		move_and_slide()
 		return
 	target = _get_preferred_target()
+	if not is_attacking and not awareness.can_engage(self, target):
+		walk_sound.stop()
+		var direction := awareness.return_direction(self)
+		velocity.x = move_toward(velocity.x, direction.x * move_speed, movement_acceleration * delta)
+		velocity.z = move_toward(velocity.z, direction.z * move_speed, movement_acceleration * delta)
+		if direction.length_squared() > 0.01:
+			rotation.y = rotate_toward(rotation.y, atan2(direction.x, direction.z), turn_speed * delta)
+			_play(&"Walk")
+		else:
+			_play(&"Idle")
+		_apply_gravity(delta)
+		move_and_slide()
+		return
 	if target == null or not is_instance_valid(target):
 		walk_sound.stop()
 		_apply_gravity(delta)
@@ -216,8 +233,10 @@ func take_damage(amount: float, _attacker: Node = null, play_hit_audio: bool = t
 	if flexing:
 		return false
 	current_health = maxf(current_health - amount, 0.0)
-	preload("res://combat_impact.gd").hit(self, _attacker, amount)
-	hit_sound.play()
+	if play_hit_audio:
+		preload("res://combat_impact.gd").hit(self, _attacker, amount)
+		if not hit_sound.playing:
+			hit_sound.play()
 	if not flexed and current_health <= max_health * 0.05:
 		flexed = true
 		flexing = true

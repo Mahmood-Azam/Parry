@@ -388,6 +388,8 @@ func _finish_portal_arrivals() -> void:
 		# Local coordinates also work during scene teardown, when newly spawned
 		# siblings can already have left the tree before this cinematic exits.
 		actor.position = state.local_destination
+		if actor.get("awareness") != null:
+			actor.awareness.home = state.destination
 		actor.velocity = Vector3.ZERO
 		actor.collision_layer = state.layer
 		actor.collision_mask = state.mask

@@ -142,6 +142,7 @@ var blocking := false
 var is_parrying: bool = false
 var parry_timer: float = 0.0
 var parry_cooldown_timer: float = 0.0
+var player_health_bar: ProgressBar
 var parry_chain_count: int = 0
 
 var is_dashing: bool = false
@@ -364,6 +365,7 @@ func _setup_combat_feedback() -> void:
 	combat_feedback_label.position = Vector2(-240.0, 90.0)
 	combat_feedback_label.size = Vector2(480.0, 64.0)
 	combat_feedback_label.modulate.a = 0.0
+	combat_feedback_label.hide()
 	layer.add_child(combat_feedback_label)
 
 
@@ -437,107 +439,33 @@ func _setup_combat_stats() -> void:
 	var layer := get_node_or_null("CombatFeedbackLayer") as CanvasLayer
 	if layer == null:
 		return
-	combat_stats_label = Label.new()
-	combat_stats_label.name = "CombatStats"
-	combat_stats_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT
-	combat_stats_label.vertical_alignment = VERTICAL_ALIGNMENT_TOP
-	combat_stats_label.add_theme_font_size_override("font_size", 18)
-	combat_stats_label.add_theme_color_override("font_color", Color(0.9, 0.94, 1.0, 0.95))
-	combat_stats_label.add_theme_color_override("font_shadow_color", Color(0.02, 0.02, 0.04, 0.9))
-	combat_stats_label.add_theme_constant_override("shadow_offset_x", 2)
-	combat_stats_label.add_theme_constant_override("shadow_offset_y", 2)
-	combat_stats_label.position = Vector2(24.0, 18.0)
-	combat_stats_label.size = Vector2(620.0, 155.0)
-	layer.add_child(combat_stats_label)
-	fire_meter_bar = ProgressBar.new()
+	player_health_bar = preload("res://combat_health_bar.gd").new()
+	player_health_bar.name = "PlayerHealth"
+	player_health_bar.bar_height = 6.0
+	player_health_bar.position = Vector2(24, 24)
+	player_health_bar.size = Vector2(180, 6)
+	player_health_bar.max_value = max_health
+	player_health_bar.value = current_health
+	layer.add_child(player_health_bar)
+	fire_meter_bar = preload("res://layered_fire_meter.gd").new()
 	fire_meter_bar.name = "FireMeter"
-	fire_meter_bar.position = Vector2(24.0, 132.0)
-	fire_meter_bar.size = Vector2(360.0, 18.0)
-	fire_meter_bar.min_value = 0.0
-	fire_meter_bar.max_value = fire_meter_max
-	fire_meter_bar.value = fire_meter
-	fire_meter_bar.show_percentage = false
-	var fire_background := StyleBoxFlat.new()
-	fire_background.bg_color = Color(0.08, 0.04, 0.03, 0.9)
-	fire_background.border_color = Color(0.45, 0.16, 0.04, 0.95)
-	fire_background.set_border_width_all(2)
-	fire_background.corner_radius_top_left = 5
-	fire_background.corner_radius_top_right = 5
-	fire_background.corner_radius_bottom_left = 5
-	fire_background.corner_radius_bottom_right = 5
-	var fire_fill := StyleBoxFlat.new()
-	fire_fill.bg_color = Color(1.0, 0.22, 0.025, 0.98)
-	fire_fill.border_color = Color(1.0, 0.72, 0.1, 0.95)
-	fire_fill.set_border_width_all(1)
-	fire_fill.corner_radius_top_left = 5
-	fire_fill.corner_radius_top_right = 5
-	fire_fill.corner_radius_bottom_left = 5
-	fire_fill.corner_radius_bottom_right = 5
-	fire_meter_bar.add_theme_stylebox_override("background", fire_background)
-	fire_meter_bar.add_theme_stylebox_override("fill", fire_fill)
+	fire_meter_bar.position = Vector2(24, 38)
+	fire_meter_bar.size = Vector2(180, 10)
 	layer.add_child(fire_meter_bar)
-	fire_charge_label = Label.new()
-	fire_charge_label.name = "SlashCharge"
-	fire_charge_label.position = Vector2(398.0, 128.0)
-	fire_charge_label.add_theme_font_size_override("font_size", 18)
-	layer.add_child(fire_charge_label)
-	fill_fire_button = Button.new()
-	fill_fire_button.name = "FillFireButton"
-	fill_fire_button.text = "FILL FIRE  [R]"
-	fill_fire_button.tooltip_text = "Instantly refill fire for combat practice."
-	fill_fire_button.focus_mode = Control.FOCUS_NONE
-	fill_fire_button.set_anchors_preset(Control.PRESET_TOP_RIGHT)
-	fill_fire_button.position = Vector2(-185.0, 18.0)
-	fill_fire_button.size = Vector2(165.0, 34.0)
-	fill_fire_button.add_theme_color_override("font_color", Color(1.0, 0.66, 0.24))
-	fill_fire_button.pressed.connect(_fill_fire_meter)
-	layer.add_child(fill_fire_button)
 	_update_combat_stats()
 
 
 func _update_combat_stats() -> void:
-	if combat_stats_label == null:
-		return
-	var parry_state := "READY"
-	if is_parrying:
-		parry_state = "ACTIVE %.2fs" % maxf(parry_window - parry_timer, 0.0)
-	elif blocking:
-		parry_state = "BLOCKING (%.0f%% DAMAGE)" % (block_damage_multiplier * 100.0)
-	elif parry_cooldown_timer > 0.0:
-		parry_state = "RECOVERY %.2fs" % parry_cooldown_timer
-	var dash_state := "READY" if dash_cooldown_timer <= 0.0 else "COOLDOWN %.2fs" % dash_cooldown_timer
-	combat_stats_label.text = "HP: %d / %d\nPARRY: %s  |  PERFECT: %.2fs / %.2fs  |  RANGE: %.1fm\nFIRE: %d / %d  |  BLADE: %s  |  RIPOSTE: %d/%d\nSHADOW: %s  |  CAMERA: %s" % [
-		roundi(current_health), roundi(max_health), parry_state, perfect_parry_window, parry_window, parry_hitbox_radius,
-		roundi(fire_meter), roundi(fire_meter_max), "CHARGING" if is_fire_channeling else ("IGNITED" if fire_meter > 0.0 else "COLD"), parry_chain_count, parries_for_riposte, dash_state, "FREE" if camera_unlocked else "FOLLOW"
-	]
+	if player_health_bar != null:
+		player_health_bar.max_value = max_health
+		player_health_bar.value = current_health
 	if fire_meter_bar != null:
-		fire_meter_bar.max_value = fire_meter_max
-		fire_meter_bar.value = fire_meter
-	if fire_charge_label != null:
-		fire_charge_label.visible = is_fire_channeling or fire_full_hold_remaining > 0.0
-		var charge_ratio := clampf(fire_channel_charge / maxf(fire_meter_max, 1.0), 0.0, 1.0)
-		var heat := "WHITE HOT" if charge_ratio >= 0.8 else ("HOT" if charge_ratio >= 0.4 else "EMBER")
-		fire_charge_label.text = "SLASH: %d%%  |  %s  |  Release MMB" % [roundi(charge_ratio * 100.0), heat]
-		fire_charge_label.modulate = Color(1.0, 0.25, 0.04).lerp(Color(1.0, 0.96, 0.83), charge_ratio)
-		if not is_fire_channeling and fire_full_hold_remaining > 0.0:
-			fire_charge_label.text = "FULL FIRE  |  Decay in %.1fs" % fire_full_hold_remaining
-			fire_charge_label.modulate = Color(1.0,0.82,0.26)
-	if fill_fire_button != null:
-		fill_fire_button.disabled = not is_alive or is_using_ultimate
+		fire_meter_bar.set_reserve(fire_meter, fire_meter_max, is_using_ultimate)
 
 
-func _show_combat_feedback(message: String, color: Color) -> void:
-	if combat_feedback_label == null:
-		return
-	if combat_feedback_tween != null and combat_feedback_tween.is_valid():
-		combat_feedback_tween.kill()
-	combat_feedback_label.text = message
-	combat_feedback_label.add_theme_color_override("font_color", color)
-	combat_feedback_label.scale = Vector2(0.82, 0.82)
-	combat_feedback_label.modulate.a = 1.0
-	combat_feedback_tween = create_tween().set_parallel(true)
-	combat_feedback_tween.tween_property(combat_feedback_label, "scale", Vector2.ONE, 0.10).set_trans(Tween.TRANS_BACK)
-	combat_feedback_tween.tween_property(combat_feedback_label, "modulate:a", 0.0, 0.65).set_delay(0.35)
+# Feedback is communicated by hit flashes, sparks, audio and animation, not text.
+func _show_combat_feedback(_message: String, _color: Color) -> void:
+	pass
 
 
 func _show_parry_flash(is_perfect: bool) -> void:
@@ -628,15 +556,13 @@ func _update_fire_blade_effect() -> void:
 func _add_fire_meter(amount: float) -> void:
 	if amount <= 0.0:
 		return
-	fire_meter = clampf(fire_meter + amount, 0.0, fire_meter_max)
-	if fire_meter >= fire_meter_max:
+	fire_meter = clampf(fire_meter + amount, 0.0, fire_meter_max * 2.0)
+	if is_equal_approx(fire_meter, fire_meter_max) or fire_meter >= fire_meter_max * 2.0:
 		fire_full_hold_remaining = fire_full_hold_duration
 		fire_was_full = true
 	_update_fire_blade_effect()
 	_update_combat_stats()
 	_show_combat_feedback("PARRY  +FIRE", Color(1.0, 0.38, 0.06))
-	if ultimate_controller != null:
-		ultimate_controller.add_fire(amount)
 
 
 func _find_first_mesh(root: Node) -> MeshInstance3D:
@@ -847,7 +773,7 @@ func _begin_fire_channel() -> void:
 func _update_passive_fire(delta: float) -> void:
 	if is_fire_channeling:
 		return
-	var full := fire_meter >= fire_meter_max - 0.001
+	var full := is_equal_approx(fire_meter, fire_meter_max) or fire_meter >= fire_meter_max * 2.0 - 0.001
 	if full and not fire_was_full:
 		fire_full_hold_remaining = fire_full_hold_duration
 	fire_was_full = full
@@ -1182,14 +1108,13 @@ func _kill_all_enemies() -> void:
 func _fill_fire_meter() -> void:
 	if not is_alive or is_using_ultimate:
 		return
-	fire_meter = fire_meter_max
+	fire_meter = minf(fire_meter + fire_meter_max, fire_meter_max * 2.0)
 	fire_full_hold_remaining = fire_full_hold_duration
 	fire_was_full = true
 	_update_fire_blade_effect()
 	_update_combat_stats()
 	_show_combat_feedback("FIRE REFILLED", Color(1.0, 0.65, 0.18))
 	COMBAT_FX.burst(get_tree().current_scene, global_position + Vector3.UP, Color(1.0, 0.42, 0.04), 18, 0.55)
-	ultimate_controller.add_fire(fire_meter_max)
 
 
 func _update_camera(delta: float) -> void:
@@ -1523,18 +1448,21 @@ func _resolve_parry(attacker: Node, attack_data: Dictionary = {}) -> void:
 	_spawn_parry_effect(attacker, is_perfect)
 	_add_fire_meter(fire_per_parry + (10.0 if is_perfect else 0.0))
 	parry_chain_count += 1
-	if attacker != null and parry_chain_count >= maxi(parries_for_riposte, 1):
+	var owns_response := false
+	if is_instance_valid(attacker) and attacker.has_method("on_parried"):
+		owns_response = attacker.call("on_parried", self, is_perfect) == true
+	if not owns_response and attacker != null and parry_chain_count >= maxi(parries_for_riposte, 1):
 		if attacker.has_method("take_damage"):
 			attacker.call("take_damage", parry_riposte_damage, self)
 		parry_chain_count = 0
 		_show_combat_feedback("RIPOSTE", Color(1.0, 0.3, 0.05))
 		_add_camera_trauma(0.3)
+	if owns_response and parry_chain_count >= maxi(parries_for_riposte, 1):
+		parry_chain_count = 0
 	emit_signal("parry_stun_requested", attacker, parry_stun_duration, is_perfect)
-	if attacker != null and attacker.has_method("apply_stun"):
+	if not owns_response and attacker != null and attacker.has_method("apply_stun"):
 		attacker.call("apply_stun", parry_stun_duration)
 	emit_signal("parry_success", attacker, is_perfect, attack_data)
-	if is_instance_valid(attacker) and attacker.has_method("on_parried"):
-		attacker.call("on_parried", self, is_perfect)
 
 
 # --- Shadow Dash ---
