@@ -1,46 +1,24 @@
 [gd_scene format=3]
 
 [ext_resource type="Script" path="res://player_controller.gd" id="1_0xm2m"]
+[ext_resource type="Script" path="res://main.gd" id="5_main"]
+[ext_resource type="PackedScene" path="res://assets/maps/campus/campus.tscn" id="6_campus"]
+[ext_resource type="Script" path="res://assets/maps/campus/campus_runtime.gd" id="7_map_runtime"]
+[ext_resource type="Script" path="res://encounter_director.gd" id="8_encounters"]
 [ext_resource type="PackedScene" path="res://assets/animations/Lite Sword and Shield Pack/Knight D Pelegrini.fbx" id="2_1bvp3"]
-[ext_resource type="Script" path="res://assets/enemies/skeleton/skeleton_enemy.gd" id="3_1bvp3"]
-[ext_resource type="PackedScene" path="res://assets/enemies/skeleton/skeleton_-_low_tier_enemy.glb" id="4_lquwl"]
-
-[sub_resource type="BoxShape3D" id="BoxShape3D_0xm2m"]
-size = Vector3(40, 0.5, 40)
-
-[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_h2yge"]
-albedo_color = Color(0.14901961, 0.2, 0.29411766, 1)
-metallic = 0.12
-roughness = 0.82
-
-[sub_resource type="BoxMesh" id="BoxMesh_h2yge"]
-size = Vector3(40, 0.5, 40)
 
 [sub_resource type="CapsuleShape3D" id="CapsuleShape3D_lquwl"]
 radius = 0.38
 height = 1.8
 
-[sub_resource type="CapsuleShape3D" id="CapsuleShape3D_7mycd"]
-radius = 0.35
-height = 1.7
-
 [node name="Main" type="Node3D" unique_id=97730360]
+script = ExtResource("5_main")
 
-[node name="DirectionalLight3D" type="DirectionalLight3D" parent="." unique_id=1928618000]
-transform = Transform3D(0.8191522, 0.40557957, -0.4055797, 0, 0.7071069, 0.70710665, 0.5735762, -0.5792279, 0.57922816, 0, 0, 0)
-shadow_enabled = true
-
-[node name="Baseplate" type="StaticBody3D" parent="." unique_id=2029213801]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.25, 0)
-
-[node name="CollisionShape3D" type="CollisionShape3D" parent="Baseplate" unique_id=1535632826]
-shape = SubResource("BoxShape3D_0xm2m")
-
-[node name="MeshInstance3D" type="MeshInstance3D" parent="Baseplate" unique_id=2074092910]
-material_override = SubResource("StandardMaterial3D_h2yge")
-mesh = SubResource("BoxMesh_h2yge")
+[node name="CampusMap" parent="." instance=ExtResource("6_campus")]
+script = ExtResource("7_map_runtime")
 
 [node name="Player" type="CharacterBody3D" parent="." unique_id=1671350807]
+position = Vector3(35, 0.15, -73)
 script = ExtResource("1_0xm2m")
 
 [node name="CollisionShape3D" type="CollisionShape3D" parent="Player" unique_id=1107804964]
@@ -62,13 +40,5 @@ fov = 58.0
 
 [node name="WarriorKnight" parent="Player" unique_id=1797102545 instance=ExtResource("2_1bvp3")]
 
-[node name="SkeletonEnemy" type="CharacterBody3D" parent="." unique_id=1119615305]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, -4)
-script = ExtResource("3_1bvp3")
-
-[node name="SkeletonModel" parent="SkeletonEnemy" unique_id=2023616911 instance=ExtResource("4_lquwl")]
-transform = Transform3D(1, 0, 0, 0, 0.78152543, 0, 0, 0, 1, -0.010652661, 0, -0.00025224686)
-
-[node name="CollisionShape3D" type="CollisionShape3D" parent="SkeletonEnemy" unique_id=127126490]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.85, 0)
-shape = SubResource("CapsuleShape3D_7mycd")
+[node name="EncounterDirector" type="Node3D" parent="."]
+script = ExtResource("8_encounters")
