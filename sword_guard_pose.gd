@@ -30,7 +30,7 @@ func _process(delta: float) -> void:
 	release_remaining = maxf(release_remaining - delta, 0.0)
 	if release_remaining <= 0.0:
 		release_blend = move_toward(release_blend, 0.0, delta / 0.18)
-	var channeling: bool = is_instance_valid(controller) and controller.is_fire_channeling
+	var channeling: bool = is_instance_valid(controller) and (controller.is_fire_channeling or controller.ultimate_charging)
 	channel_blend = move_toward(channel_blend, 1.0 if channeling else 0.0, delta / 0.20)
 	stance_time += delta
 	var allowed: bool = (guard_active or channeling or release_remaining > 0.0) and is_instance_valid(controller)
@@ -50,10 +50,18 @@ func _process_modification() -> void:
 	# This model faces +Z. Raise the hilt below the right shoulder and angle
 	# the blade across the torso, with the left palm bracing its upper flat.
 	var blade_axis := Vector3(0.84, 0.54, 0.0).normalized()
-	blade_axis = blade_axis.lerp(Vector3(-0.16, 0.96, 0.22).normalized(), channel_blend).normalized()
+	var charged_axis := Vector3(-0.16, 0.96, 0.22).normalized()
+	var released_axis := Vector3(0.72, -0.25, 0.65).normalized()
+	if controller.is_using_ultimate:
+		if controller.ultimate_kind == "focused":
+			charged_axis = Vector3(-0.08, 0.2, 0.98).normalized()
+			released_axis = Vector3(0.02, 0.02, 1.0).normalized()
+		else:
+			released_axis = Vector3(0.25, -0.88, 0.4).normalized()
+	blade_axis = blade_axis.lerp(charged_axis, channel_blend).normalized()
 	var release_progress := smoothstep(0.0, 1.0, 1.0 - release_remaining / 0.26)
 	if release_blend > 0.0:
-		var cast_axis := Vector3(-0.16, 0.96, 0.22).normalized().lerp(Vector3(0.72, -0.25, 0.65).normalized(), release_progress).normalized()
+		var cast_axis := charged_axis.lerp(released_axis, release_progress).normalized()
 		blade_axis = blade_axis.lerp(cast_axis, release_blend).normalized()
 	var palm_normal := Vector3.FORWARD
 	palm_normal = (palm_normal - blade_axis * palm_normal.dot(blade_axis)).normalized()

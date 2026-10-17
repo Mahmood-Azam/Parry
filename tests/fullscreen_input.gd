@@ -31,11 +31,14 @@ func check_fullscreen(expected: bool) -> void:
 	if DisplayServer.get_name() != "headless":
 		assert((root.mode in [Window.MODE_FULLSCREEN, Window.MODE_EXCLUSIVE_FULLSCREEN]) == expected)
 		if expected:
+			assert(root.mode == Window.MODE_FULLSCREEN)
 			var desktop := DisplayServer.screen_get_size(root.current_screen)
 			print("NATIVE mode=",root.mode," output=",root.size," desktop=",desktop)
 			assert(root.size == desktop)
 
 func run() -> void:
+	assert(ProjectSettings.get_setting("display/window/size/mode") == Window.MODE_FULLSCREEN, "Project must start natively, bypassing editor game embedding")
+	assert(not Engine.is_embedded_in_editor(), "Fullscreen test requires the native game window")
 	display = root.get_node("DisplaySettings")
 	original_preference = display.get_fullscreen()
 	display.set_fullscreen(false)
@@ -73,6 +76,35 @@ func run() -> void:
 	await key(KEY_F11)
 	check_fullscreen(false)
 	print("PASS stale-state recovery and gameplay shortcut")
+	# Rapid requests must leave the last choice active, with one saved preference.
+	display.set_fullscreen(true)
+	display.set_fullscreen(false)
+	display.set_fullscreen(true)
+	await settle()
+	check_fullscreen(true)
+	var config := ConfigFile.new()
+	assert(config.load(display.SETTINGS_PATH) == OK)
+	assert(config.get_value("display", "fullscreen") == true)
+	print("PASS rapid toggle requests and saved preference")
+	if DisplayServer.get_name() != "headless":
+		# Reproduce a native mode interruption without changing the user's choice.
+		root.mode = Window.MODE_WINDOWED
+		await settle()
+		display._poll_display()
+		assert(display._fullscreen == true)
+		display._restore_fullscreen_on_focus()
+		await settle()
+		check_fullscreen(true)
+		print("PASS focus recovery without losing fullscreen preference")
+		root.mode = Window.MODE_WINDOWED
+		await settle()
+		display.set_fullscreen(false)
+		await settle()
+		display._restore_fullscreen_on_focus()
+		await settle()
+		check_fullscreen(false)
+		assert(display._fullscreen == false)
+		print("PASS intentional windowed choice cancels focus recovery")
 	display.set_fullscreen(original_preference)
 	await settle()
 	print("PASS fullscreen regression suite")
