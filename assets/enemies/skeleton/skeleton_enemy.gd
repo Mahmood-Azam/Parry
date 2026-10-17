@@ -59,6 +59,7 @@ var debug_state_label: Label3D
 var debug_body_material: StandardMaterial3D
 var debug_attack_material: StandardMaterial3D
 var attack_sound: AudioStreamPlayer
+var boss_aura: Node3D
 var attack_audio_stream: AudioStream = preload("res://assets/audio/Attack.mp3")
 var stun_pose_elapsed: float = 0.0
 var stun_pose_base_rotation: Vector3
@@ -87,6 +88,11 @@ func _ready() -> void:
 			animation_player.get_animation(animation_name).loop_mode = Animation.LOOP_LINEAR
 	animation_player.animation_finished.connect(_on_animation_finished)
 	_play(&"Lesha_idle")
+	if is_boss:
+		boss_aura = preload("res://boss_aura.gd").new() as Node3D
+		boss_aura.name = "BossAura"
+		boss_aura.call("configure", Color(0.64, 0.28, 1.0), 1.85, 0.82)
+		add_child(boss_aura)
 
 func _physics_process(delta: float) -> void:
 	if is_dead:
@@ -178,6 +184,8 @@ func _begin_combo() -> void:
 
 func _start_strike() -> void:
 	is_attacking = true
+	if is_instance_valid(boss_aura):
+		boss_aura.call("charge")
 	attack_has_hit = false
 	attack_timer = attack_cooldown
 	var clip := animation_player.get_animation(&"Lesha_attack_1")
@@ -346,6 +354,8 @@ func take_damage(amount: float, _attacker: Node = null) -> bool:
 	preload("res://combat_impact.gd").hit(self, _attacker, amount)
 	if is_boss and not enraged and current_health > 0.0 and current_health <= max_health * 0.5:
 		enraged = true
+		if is_instance_valid(boss_aura):
+			boss_aura.call("power_surge")
 		move_speed *= 1.2
 		attack_cooldown *= 0.72
 		attack_animation_speed_scale *= 1.20
@@ -396,6 +406,8 @@ func _die() -> void:
 	if is_dead:
 		return
 	is_dead = true
+	if is_instance_valid(boss_aura):
+		boss_aura.call("fade_out")
 	remove_from_group("enemy")
 	collision_layer = 0
 	collision_mask = 0
@@ -626,6 +638,8 @@ func _process_attack_hit() -> void:
 	if animation_player.current_animation_position < attack_animation.length * attack_hit_time:
 		return
 	attack_has_hit = true
+	if is_instance_valid(boss_aura):
+		boss_aura.call("attack_splash")
 	var center := _get_target_center()
 	var offset := center - global_position
 	var distance := Vector2(offset.x, offset.z).length()

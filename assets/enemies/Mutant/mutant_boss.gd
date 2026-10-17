@@ -39,6 +39,13 @@ func _ready() -> void:
 	animation_player.animation_finished.connect(_on_animation_finished)
 	punches_before_jump = randi_range(2, 3)
 	_play(&"Idle")
+	boss_aura = preload("res://boss_aura.gd").new() as Node3D
+	boss_aura.name = "BossAura"
+	if get_script().resource_path.ends_with("bara_ustaad.gd"):
+		boss_aura.call("configure", Color(1.0, 0.16, 0.11), 8.6, 2.25)
+	else:
+		boss_aura.call("configure", Color(0.16, 0.64, 1.0), 3.1, 1.25)
+	add_child(boss_aura)
 
 func _import_clips() -> void:
 	var library := AnimationLibrary.new()
@@ -153,6 +160,8 @@ func _can_see_player() -> bool:
 
 func _start_attack() -> void:
 	is_attacking = true
+	if is_instance_valid(boss_aura):
+		boss_aura.call("charge")
 	attack_has_hit = false
 	walk_sound.stop()
 	if punches_done >= punches_before_jump:
@@ -176,6 +185,8 @@ func _process_attack_contact() -> void:
 	if animation_player.current_animation_position < clip.length * hit_fraction:
 		return
 	attack_has_hit = true
+	if is_instance_valid(boss_aura):
+		boss_aura.call("attack_splash")
 	if attack_kind == &"Jump":
 		jump_landed.emit()
 		if is_instance_valid(player_target) and player_target.has_method("_add_camera_trauma"):
@@ -239,6 +250,8 @@ func take_damage(amount: float, _attacker: Node = null, play_hit_audio: bool = t
 			hit_sound.play()
 	if not flexed and current_health <= max_health * 0.05:
 		flexed = true
+		if is_instance_valid(boss_aura):
+			boss_aura.call("power_surge")
 		flexing = true
 		is_attacking = false
 		attack_has_hit = true
@@ -273,6 +286,8 @@ func _die() -> void:
 	if is_dead:
 		return
 	is_dead = true
+	if is_instance_valid(boss_aura):
+		boss_aura.call("fade_out")
 	remove_from_group("enemy")
 	collision_layer = 0
 	collision_mask = 0

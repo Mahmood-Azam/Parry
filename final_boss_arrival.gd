@@ -95,6 +95,9 @@ func _play_arrival() -> void:
 func _impact() -> void:
 	shake_time = 0.55
 	boss.jump_sound.play()
+	var aura := boss.get_node_or_null("BossAura")
+	if aura != null:
+		aura.call("power_surge")
 	if is_instance_valid(player):
 		player.call("_add_camera_trauma", 0.35)
 	FX.burst(get_parent(), LANDING + Vector3.UP * 0.2, Color(1.0, 0.53, 0.2), 45, 1.3)

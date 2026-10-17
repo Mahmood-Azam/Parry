@@ -92,6 +92,8 @@ func _physics_process(delta: float) -> void:
 func _start_attack() -> void:
 	var choices := ATTACKS.filter(func(item: StringName) -> bool: return item != last_attack)
 	attack_kind = choices.pick_random()
+	if is_instance_valid(boss_aura):
+		boss_aura.call("charge")
 	last_attack = attack_kind
 	is_attacking = true
 	attack_has_hit = false
@@ -124,6 +126,8 @@ func _process_attack_contact() -> void:
 	if animation_player.current_animation_position < clip.length * _hit_fraction():
 		return
 	attack_has_hit = true
+	if is_instance_valid(boss_aura):
+		boss_aura.call("attack_splash")
 	if not is_instance_valid(target) or not target.has_method("take_damage"):
 		return
 	var center := _get_target_center()
