@@ -27,6 +27,7 @@ var enraged: bool = false
 @export var leash_range: float = 16.0
 @export var three_hit_combo: bool = true
 @export_range(0.0, 1.0) var triple_attack_chance := 0.45
+@export var close_attack_recovery := 0.90 ## Breathing room between patterns; strike cadence stays unchanged.
 var combo_length := 1
 var awareness := preload("res://enemy_awareness.gd").new()
 var combo_step := 0
@@ -197,7 +198,7 @@ func _finish_combo_strike() -> void:
 		is_attacking = false
 		attack_has_hit = false
 		animation_player.speed_scale = 1.0
-		attack_timer = attack_cooldown
+		attack_timer = close_attack_recovery if three_hit_combo else attack_cooldown
 		current_animation = &""
 		_play(&"Lesha_idle")
 
@@ -267,6 +268,9 @@ func apply_stun(duration: float = -1.0) -> void:
 	# next resting pose; that accumulated tilt made the Ash Warden lean sideways.
 	is_attacking = false
 	attack_has_hit = true
+	if three_hit_combo:
+		# The stun already provides a punish window; do not add another long wait.
+		attack_timer = minf(attack_timer, close_attack_recovery)
 	velocity.x = 0.0
 	velocity.z = 0.0
 	animation_player.speed_scale = 1.0

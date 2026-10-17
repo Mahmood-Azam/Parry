@@ -1440,6 +1440,8 @@ func _resolve_parry(attacker: Node, attack_data: Dictionary = {}) -> void:
 		return
 	var is_perfect: bool = parry_timer <= perfect_parry_window
 	_end_parry(false)
+	if sword_guard_pose != null:
+		sword_guard_pose.call("play_parry", is_perfect)
 	if parry_sound != null:
 		parry_sound.play()
 	_trigger_parry_feedback(is_perfect)
