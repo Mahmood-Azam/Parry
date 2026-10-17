@@ -2,7 +2,7 @@ extends Node3D
 ## Velocity belongs to this root; only one mesh from the supplied VFX pack is used.
 @export var speed: float = 18.0
 @export var lifetime: float = 1.2
-@export var hit_radius: float = 0.4 ## Contact tolerance around the moving slash plane.
+@export var hit_radius: float = 0.65 ## Forgiving contact tolerance for grouped enemies.
 @export var charge_ratio: float = 1.0
 var slash_width: float = 0.65
 var slash_height: float = 3.8
@@ -36,7 +36,7 @@ var velocity: Vector3 = Vector3.FORWARD * 18.0
 var damage: float = 0.0
 var source_player: Node
 var age: float = 0.0
-var hit_targets: Array[Node] = []
+var hit_targets: Dictionary = {} ## Instance IDs prevent repeat hits and stale references.
 var visual_root: Node3D
 var flame_material: ShaderMaterial
 var echo_materials: Array[ShaderMaterial] = []
@@ -68,20 +68,24 @@ func _physics_process(delta: float) -> void:
 	global_position += velocity * delta
 	_animate_visual()
 	for candidate in get_tree().get_nodes_in_group("enemy"):
-		if not is_instance_valid(candidate) or candidate in hit_targets or not candidate is Node3D:
+		if not is_instance_valid(candidate) or not candidate is Node3D or hit_targets.has(candidate.get_instance_id()):
 			continue
 		var enemy := candidate as Node3D
 		var enemy_center := enemy.global_position + Vector3.UP * 0.85
 		if not _intersects_sweep(enemy_center, previous_position, global_position):
 			continue
-		hit_targets.append(enemy)
+		hit_targets[enemy.get_instance_id()] = true
 		_spawn_impact(enemy_center)
 		if enemy.has_method("take_damage"):
 			enemy.call("take_damage", damage, source_player)
-		if is_instance_valid(enemy) and enemy.has_method("apply_stun"):
+		if not is_instance_valid(enemy) or enemy.get("is_dead") == true:
+			continue
+		if damage > 0.0 and enemy.has_method("apply_burn"):
+			enemy.call("apply_burn", lerpf(3.0, 4.5, charge_ratio), damage * 0.12, charge_ratio, source_player)
+		if enemy.has_method("apply_stun"):
 			enemy.call("apply_stun", 0.45)
-		queue_free()
-		return
+		# Pierce without steering or losing speed. Keep checking the same sweep:
+		# closely packed targets can all be struck during this physics frame.
 
 
 func _create_slash_visual() -> void:
@@ -258,7 +262,6 @@ func _spawn_impact(impact_position: Vector3) -> void:
 		source_player.call("_add_camera_trauma", 0.12 + charge_ratio * 0.12)
 		if source_player.has_method("_show_combat_feedback"):
 			source_player.call("_show_combat_feedback", "FIRE HIT", _heat_color())
-	_release_trail()
 
 
 func _animate_visual() -> void:

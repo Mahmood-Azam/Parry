@@ -1,4 +1,6 @@
 extends CharacterBody3D
+const BURN_EFFECT := preload("res://enemy_burn.gd")
+var burn_effect: Node3D
 
 var DEATH_SCENE: PackedScene = load("res://assets/enemies/animations/Falling Back Death.fbx")
 
@@ -19,6 +21,8 @@ var DEATH_SCENE: PackedScene = load("res://assets/enemies/animations/Falling Bac
 @export var max_health: float = 100.0
 @export var show_debug_hitboxes: bool = false ## Enable only when debugging combat ranges.
 @export var death_dissolve_duration: float = 1.35
+@export var is_boss: bool = false
+var enraged: bool = false
 
 @onready var player_target: Node3D = get_node_or_null("../Player") as Node3D
 @onready var animation_player: AnimationPlayer = $SkeletonModel/AnimationPlayer
@@ -154,7 +158,19 @@ func _on_animation_finished(animation_name: StringName) -> void:
 		current_animation = &""
 
 
+func apply_burn(duration: float = 3.0, dps: float = 6.0, heat: float = 0.5, attacker: Node = null) -> void:
+	if is_dead or duration <= 0.0 or dps <= 0.0:
+		return
+	if not is_instance_valid(burn_effect):
+		burn_effect = BURN_EFFECT.new()
+		burn_effect.name = "BurnStatus"
+		add_child(burn_effect)
+	burn_effect.ignite(duration, dps, heat, attacker)
+
+
 func apply_stun(duration: float = -1.0) -> void:
+	if is_dead:
+		return
 	var requested_duration := default_parry_stun_duration if duration < 0.0 else duration
 	stun_remaining = maxf(stun_remaining, requested_duration)
 	stun_pose_elapsed = 0.0
@@ -231,12 +247,18 @@ func take_damage(amount: float, _attacker: Node = null) -> bool:
 	if is_dead or current_health <= 0.0 or amount <= 0.0:
 		return false
 	current_health = clampf(current_health - amount, 0.0, max_health)
+	if is_boss and not enraged and current_health > 0.0 and current_health <= max_health * 0.5:
+		enraged = true
+		move_speed *= 1.2
+		attack_cooldown *= 0.72
+		attack_animation_speed_scale *= 1.20
+		attack_damage *= 1.2
+		_spawn_stun_effect()
 	if health_bar != null:
 		health_bar.value = current_health
 	health_changed.emit(current_health, max_health)
 	if current_health <= 0.0:
 		_die()
-		died.emit()
 	return true
 
 
@@ -249,13 +271,20 @@ func _import_death_animation() -> void:
 		source_root.queue_free()
 		return
 	var death_animation: Animation = source_player.get_animation("mixamo_com").duplicate(true)
-	for track_index in range(death_animation.get_track_count()):
+	var rig := skeleton_model.find_child("Skeleton3D", true, false) as Skeleton3D
+	for track_index in range(death_animation.get_track_count() - 1, -1, -1):
 		var track_path := String(death_animation.track_get_path(track_index))
 		var separator := track_path.find(":")
 		if separator < 0:
 			continue
 		var bone_name := track_path.substr(separator + 1).replace("mixamorig:", "mixamorig_")
+		if rig == null or rig.find_bone(bone_name) < 0:
+			death_animation.remove_track(track_index)
+			continue
 		death_animation.track_set_path(track_index, NodePath("Skeleton3D:" + bone_name))
+	if death_animation.get_track_count() == 0:
+		source_root.queue_free()
+		return # Incompatible rigs use the existing collapse/dissolve fallback.
 	var library := animation_player.get_animation_library("")
 	if library == null:
 		library = AnimationLibrary.new()
@@ -386,6 +415,9 @@ func _process(_delta: float) -> void:
 		return
 	_update_debug_hitboxes()
 	if health_bar == null:
+		return
+	if is_boss:
+		health_bar.hide() # The encounter director owns the persistent boss HUD.
 		return
 	var camera := get_viewport().get_camera_3d()
 	if camera == null:

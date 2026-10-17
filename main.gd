@@ -6,6 +6,7 @@ var overlay: ColorRect
 var home_panel: PanelContainer
 var options_panel: PanelContainer
 var death_panel: PanelContainer
+var victory_panel: PanelContainer
 var death_request_id: int = 0
 const START_GAME_META := "shadowborn_start_game"
 
@@ -55,12 +56,25 @@ func _build_menu() -> void:
 	menu_layer.add_child(home_panel)
 
 	options_panel = _make_panel("OPTIONS", true)
+	options_panel.position = Vector2(46.0, -305.0)
+	options_panel.size = Vector2(450.0, 610.0)
 	var options_box := options_panel.get_node("Margin/VBox") as VBoxContainer
 	var controls := Label.new()
 	controls.text = "WASD  Move\nSHIFT  Sprint\nSPACE  Jump\nF / RMB  Parry, then Block\nQ  Shadow Dash\nLMB  Fire Attack\nMMB Hold  Channel remaining fire\nRelease MMB  Launch charged air slash\nR  Fill fire instantly\n\nParry three times to trigger an automatic riposte."
 	controls.add_theme_font_size_override("font_size", 18)
 	controls.add_theme_color_override("font_color", Color(0.82, 0.87, 0.98))
 	options_box.add_child(controls)
+	controls.add_theme_font_size_override("font_size", 14)
+	options_box.add_theme_constant_override("separation", 8)
+	DisplaySettings.create_controls(options_box)
+	var quality_picker := OptionButton.new()
+	quality_picker.add_item("Performance — sparse grass")
+	quality_picker.add_item("Balanced")
+	quality_picker.add_item("High — dense vegetation")
+	var map := get_node("CampusMap")
+	quality_picker.selected = map.quality
+	quality_picker.item_selected.connect(map.apply_quality)
+	options_box.add_child(quality_picker)
 	_add_button(options_box, "BACK", Callable(self, "_show_home"))
 	menu_layer.add_child(options_panel)
 
@@ -75,6 +89,17 @@ func _build_menu() -> void:
 	_add_button(death_box, "RESPAWN", Callable(self, "_respawn"))
 	_add_button(death_box, "HOME", Callable(self, "_show_home"))
 	menu_layer.add_child(death_panel)
+	victory_panel = _make_panel("DAWN BREAKS", true)
+	var victory_box := victory_panel.get_node("Margin/VBox") as VBoxContainer
+	var victory_text := Label.new()
+	victory_text.text = "The Ash Warden has fallen.\nBlock D is free of shadow."
+	victory_text.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	victory_text.add_theme_font_size_override("font_size", 20)
+	victory_box.add_child(victory_text)
+	_add_button(victory_box, "EXPLORE", _continue_game)
+	_add_button(victory_box, "NEW GAME", _new_game)
+	_add_button(victory_box, "HOME", _show_home)
+	menu_layer.add_child(victory_panel)
 
 
 func _make_panel(title: String, left_aligned: bool = false) -> PanelContainer:
@@ -153,6 +178,7 @@ func _set_menu_visible(panel: Control) -> void:
 	home_panel.visible = panel == home_panel
 	options_panel.visible = panel == options_panel
 	death_panel.visible = panel == death_panel
+	victory_panel.visible = panel == victory_panel
 	title_background.visible = true
 	overlay.visible = true
 	Input.set_mouse_mode(Input.MOUSE_MODE_VISIBLE)
@@ -176,6 +202,24 @@ func _show_options() -> void:
 	_set_menu_visible(options_panel)
 
 
+func _input(event: InputEvent) -> void:
+	if event is InputEventKey and event.pressed and not event.echo and event.keycode == KEY_ESCAPE:
+		if get_tree().paused:
+			if options_panel.visible:
+				_show_home()
+			elif not death_panel.visible and get_node("Player").is_alive:
+				_continue_game()
+		else:
+			_show_home()
+		get_viewport().set_input_as_handled()
+
+
+func show_victory() -> void:
+	await get_tree().create_timer(2.0, false).timeout
+	if is_inside_tree() and get_node("Player").is_alive:
+		_set_menu_visible(victory_panel)
+
+
 func show_death_screen(delay: float = 0.72) -> void:
 	# Let the player death reaction finish before pausing and showing the menu.
 	# The timer runs even if another system pauses the tree meanwhile.
@@ -186,6 +230,7 @@ func show_death_screen(delay: float = 0.72) -> void:
 	home_panel.visible = false
 	options_panel.visible = false
 	death_panel.visible = false
+	victory_panel.visible = false
 	await get_tree().create_timer(maxf(delay, 0.0), true).timeout
 	if request_id == death_request_id and is_inside_tree():
 		_set_menu_visible(death_panel)
@@ -199,6 +244,7 @@ func _continue_game() -> void:
 	home_panel.visible = false
 	options_panel.visible = false
 	death_panel.visible = false
+	victory_panel.visible = false
 	Input.set_mouse_mode(Input.MOUSE_MODE_CAPTURED)
 
 
