@@ -12,7 +12,12 @@ func _strip(node: Node) -> void:
 
 func _on_node_added(node: Node) -> void:
 	if node is Label or node is RichTextLabel or node is Label3D or node.name == &"SpeechBubble":
-		_suppress.call_deferred(node)
+		_suppress_id.call_deferred(node.get_instance_id())
+
+func _suppress_id(node_id: int) -> void:
+	var node := instance_from_id(node_id) as Node
+	if is_instance_valid(node):
+		_suppress(node)
 
 func _suppress(node: Node) -> void:
 	if not is_instance_valid(node) or not get_parent().is_ancestor_of(node):

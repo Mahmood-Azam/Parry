@@ -1,7 +1,7 @@
 extends SceneTree
 var scene: Node3D
 func _initialize() -> void:
-	create_timer(45.0, true).timeout.connect(func(): push_error("Campus smoke test timed out"); quit(1))
+	create_timer(80.0, true).timeout.connect(func(): push_error("Campus smoke test timed out"); quit(1))
 	call_deferred("run")
 func capture(label: String) -> void:
 	if DisplayServer.get_name() != "headless":
@@ -23,6 +23,9 @@ func run() -> void:
 	await capture("night_options")
 	scene._continue_game()
 	await create_timer(0.5).timeout
+	# The updated starting position is farther from the first wave.
+	if not director.active:
+		director._start_encounter()
 	assert(director.active and director.alive == 2)
 	assert(get_nodes_in_group("mage").size() == 1)
 	await capture("night_courtyard")
@@ -52,20 +55,41 @@ func run() -> void:
 			director.boss.set_physics_process(false)
 			assert(director.boss.skeleton_model.rotation.is_equal_approx(resting_rotation), "Ash Warden must return to its upright pose")
 			await capture("night_boss")
+			player.is_using_ultimate = true
 		for enemy in get_nodes_in_group("enemy"):
 			enemy.take_damage(99999.0, player)
 		await create_timer(0.8).timeout
 		print("CLEARED ",stage," next=",director.stage," completed=",director.completed)
 	assert(not director.completed)
 	assert(director.relic_phase == 1)
+	assert(director.relic_count == 0 and director.relic.name == "WardenRelic")
+	assert(director.owl.get("state") == "hidden", "Owl must wait for an active ultimate to finish")
+	player.is_using_ultimate = false
+	player.ultimate_controller.ultimate_finished.emit("focused")
+	await process_frame
+	assert(is_instance_valid(director.owl) and director.owl.get("state") == "orbit")
 	assert(not scene.victory_panel.visible and not paused)
-	assert(director.objective.text.contains("C-101"))
+	director.owl.set_process(false)
+	director.owl.call("_process", 2.8)
+	for seconds in director.FIRST_OWL_DURATIONS:
+		director.owl.call("_process", seconds)
+	director.owl.call("_process", 0.65)
+	assert(director.owl.get("intro_seen"))
 	player.global_position = director.relic.global_position + Vector3.DOWN * 0.8
 	var collect_key := InputEventKey.new()
 	collect_key.keycode = KEY_O
 	collect_key.pressed = true
 	director._input(collect_key)
-	assert(director.relic_phase == 2 and director.relic_count == 1)
+	assert(director.relic_phase == director.PHASE_C101_RELIC and director.relic_count == 1)
+	assert(director.relic.name == "C101Relic")
+	player.global_position = director.relic.global_position + Vector3.DOWN * 0.8
+	director._input(collect_key)
+	assert(director.relic_phase == director.PHASE_MUTANT and director.relic_count == 2)
+	assert(not is_instance_valid(director.mutant), "Mutant must wait until the Owl finishes its warning")
+	director.owl.call("_process", 2.8)
+	director.owl.call("_process", 4.5)
+	director.owl.call("_process", 0.65)
+	assert(is_instance_valid(director.mutant))
 	assert(director.mutant.max_health == director.boss.max_health * 1.5)
 	assert(not director.mutant.engaged and not director.boss_bar.visible)
 	assert(director.mutant.animation_player.has_animation("Death"))
@@ -94,8 +118,7 @@ func run() -> void:
 	mutant_camera.make_current()
 	director._update_hud()
 	assert(director.boss_bar.visible and director.boss_title.text.contains("MUTANT"))
-	var ultimate_panel := player.ultimate_controller.hud.get_child(0) as Control
-	assert(director.boss_bar.get_global_rect().end.y < ultimate_panel.get_global_rect().position.y, "Boss bar must be above the ultimate HUD")
+	assert(not director.boss_bar.get_global_rect().intersects(player.fire_meter_bar.get_global_rect()), "Boss bar must not overlap the shared fire meter")
 	await create_timer(0.15).timeout
 	await capture("merged_mutant_hall")
 	director.mutant.take_damage(642.0, player)
@@ -104,12 +127,37 @@ func run() -> void:
 	await create_timer(0.15).timeout
 	await capture("merged_mutant_hall_flex")
 	director.mutant.take_damage(999999.0, player)
-	assert(director.completed and director.relic_phase == 3)
+	assert(not director.completed and director.relic_phase == director.PHASE_A_RELIC)
+	assert(director.relic.name == "ABlockRelic" and director.relic.global_position.distance_to(director.A_BLOCK_RELIC) < 0.3)
+	var a_point: Vector3 = director.A_BLOCK_RELIC
+	var a_ray := PhysicsRayQueryParameters3D.create(a_point + Vector3.UP * 3.0, a_point + Vector3.DOWN * 2.0, 1)
+	var a_ground := scene.get_world_3d().direct_space_state.intersect_ray(a_ray)
+	assert(not a_ground.is_empty() and absf(a_ground.position.y - a_point.y) < 1.2, "A-block relic must be over walkable ground")
 	assert(director.gremlin_wave_timer.is_stopped() and director.gremlins.is_empty())
 	assert(director.mutant.animation_player.current_animation == "Death")
-	assert(is_instance_valid(director.owl) and director.owl.get("state") == "orbit")
-	assert(not player.is_physics_processing())
-	print("PASS progression, relic pickup, Mutant clips, flex, death, and P shortcut")
+	player.global_position = director.relic.global_position + Vector3.DOWN * 0.8
+	director._input(collect_key)
+	assert(director.relic_count == 3 and director.relic_phase == director.PHASE_PORTAL)
+	director.owl.call("_process", 2.8)
+	director.owl.call("_process", 5.0)
+	director.owl.call("_process", 0.65)
+	var roof_point: Vector3 = scene.breach_world.gate_point
+	var roof_ray := PhysicsRayQueryParameters3D.create(roof_point + Vector3.UP * 5.0, roof_point + Vector3.DOWN * 2.0, 1)
+	var roof_ground := scene.get_world_3d().direct_space_state.intersect_ray(roof_ray)
+	assert(not roof_ground.is_empty() and absf(roof_ground.position.y - roof_point.y) < 0.3, "Portal must stand on the reachable roof slab")
+	player.global_position = scene.breach_world.gate_point + Vector3(0.8, 0, 0.5)
+	assert(director._near_portal())
+	director._input(collect_key)
+	assert(director.relic_phase == director.PHASE_FINAL_BOSS and is_instance_valid(director.bara))
+	assert(is_equal_approx(director.bara.max_health, director.mutant.max_health * 2.0))
+	await create_timer(3.2, false).timeout
+	assert(director.bara.engaged and director.bara.process_mode == Node.PROCESS_MODE_PAUSABLE)
+	director.bara.take_damage(999999.0, player)
+	assert(director.completed and director.relic_phase == director.PHASE_COMPLETE)
+	await create_timer(5.1, true).timeout
+	assert(not scene.breach_world.gate.visible, "The portal must close after Bara Ustaad falls")
+	assert(scene.victory_panel.visible and paused, "The final fight must lead to the victory screen")
+	print("PASS three relics, Owl visits, Mutant, rooftop arrival and final boss")
 	scene._new_game()
 	await create_timer(0.3, true).timeout
 	assert(current_scene.get_node("EncounterDirector").stage == 0)

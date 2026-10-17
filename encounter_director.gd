@@ -6,11 +6,32 @@ const MAGE := preload("res://assets/enemies/mage/shadowkin_mage.tscn")
 const MUTANT := preload("res://assets/enemies/Mutant/mutant_boss.tscn")
 const GREMLIN := preload("res://assets/enemies/gremlin/gremlin_enemy.tscn")
 const OWL := preload("res://assets/npc/owl/owl_companion.gd")
+const BARA_ARRIVAL := preload("res://final_boss_arrival.gd")
 const RELIC_ROOM_PATH := "CampusMap/White Campus Extensions C and D/Block C/Floor 1 central corridor and classrooms/Lecture room C-101"
 const RELIC_LOCAL := Vector3(-3.2, 4.35, -10.0)
+const A_BLOCK_RELIC := Vector3(-0.1, 0.8, -6.2)
 const MUTANT_LOCAL := Vector3(0.5, 3.45, -14.0)
 const GREMLIN_LOCAL := [Vector3(-0.5, 3.45, -17.0), Vector3(1.45, 3.45, -17.5)]
 const MAX_ACTIVE_GREMLINS := 8
+const PHASE_WARDEN_RELIC := 1
+const PHASE_C101_RELIC := 2
+const PHASE_MUTANT := 3
+const PHASE_A_RELIC := 4
+const PHASE_PORTAL := 5
+const PHASE_FINAL_BOSS := 6
+const PHASE_COMPLETE := 7
+const FIRST_OWL_LINES: Array[String] = [
+	"Salam Ustaad",
+	"Ki Haal hai",
+	"you have found the first relic",
+	"Collect all 3 relics to break the portal and bring back peace at FAST",
+	"find the next relic in C 101",
+]
+const FIRST_OWL_DURATIONS: Array[float] = [3.0, 3.0, 3.0, 5.0, 4.0]
+const SECOND_OWL_LINES: Array[String] = ["the last relic is somewhere around A block"]
+const SECOND_OWL_DURATIONS: Array[float] = [4.5]
+const THIRD_OWL_LINES: Array[String] = ["Great, you have found all relics, rush to the roof of D block and break the portal"]
+const THIRD_OWL_DURATIONS: Array[float] = [5.0]
 const STAGES := [
 	{"name": "THE COURTYARD", "hint": "Clear the courtyard. Enter the amber-lit Block D doorway.", "trigger": Vector3(35, 0.1, -74), "spawns": [Vector3(35, 0.15, -79), Vector3(31.5, 0.15, -77)], "gate": Vector3(40.15, 1.6, -74.55), "gate_size": Vector3(0.12, 2.9, 2.4)},
 	{"name": "BLOCK D — ENTRANCE", "hint": "Clear the lobby, then turn right into the long corridor.", "trigger": Vector3(44.5, 0.3, -74.55), "spawns": [Vector3(47, 0.4, -74.55), Vector3(49, 0.4, -77)], "gate": Vector3(49, 1.7, -80), "gate_size": Vector3(2.75, 2.9, 0.12)},
@@ -31,6 +52,8 @@ var boss_bar: ProgressBar
 var boss_title: Label
 var boss: CharacterBody3D
 var mutant: CharacterBody3D
+var bara: CharacterBody3D
+var arrival: Node3D
 var gremlin_wave_timer: Timer
 var gremlins: Array[CharacterBody3D] = []
 var player: CharacterBody3D
@@ -38,7 +61,9 @@ var ui_clock: float = 0.0
 var relic_phase: int = 0
 var relic_count: int = 0
 var relic: Node3D
+var relic_base_y := 0.0
 var owl: Node3D
+var pending_mutant_spawn := false
 var pickup_prompt: Label
 var message_label: Label
 
@@ -95,10 +120,14 @@ func _process(delta: float) -> void:
 		var offset := player.global_position - destination
 		if Vector2(offset.x, offset.z).length() < (4.5 if stage == 0 else 2.5) and absf(offset.y) < 1.6:
 			_start_encounter()
-	if relic_phase == 1 and is_instance_valid(relic):
+	if is_instance_valid(relic):
 		relic.rotate_y(delta * 0.8)
-		relic.position.y = RELIC_LOCAL.y + sin(Time.get_ticks_msec() * 0.002) * 0.12
+		relic.global_position.y = relic_base_y + sin(Time.get_ticks_msec() * 0.002) * 0.12
+		pickup_prompt.text = "Press O to collect relic"
 		pickup_prompt.visible = player.global_position.distance_to(relic.global_position) < 2.2
+	elif relic_phase == PHASE_PORTAL and _near_portal():
+		pickup_prompt.text = "Press O to insert the 3 relics"
+		pickup_prompt.show()
 	else:
 		pickup_prompt.hide()
 	ui_clock += delta
@@ -111,17 +140,38 @@ func _process(delta: float) -> void:
 func _input(event: InputEvent) -> void:
 	if not is_instance_valid(player) or not player.is_alive or not event is InputEventKey or not event.pressed or event.echo:
 		return
-	if relic_phase == 1 and is_instance_valid(relic) and event.keycode == KEY_O:
+	if player.is_using_ultimate:
+		return
+	if is_instance_valid(owl) and owl.get("is_intro") and owl.get("state") != "hidden":
+		return
+	if event.keycode == KEY_O and is_instance_valid(relic):
 		if player.global_position.distance_to(relic.global_position) < 2.2:
 			_collect_relic()
 			get_viewport().set_input_as_handled()
-	elif relic_phase == 3 and is_instance_valid(owl):
-		if event.keycode == KEY_K and owl.call("call_owl", player):
+	elif event.keycode == KEY_O and relic_phase == PHASE_PORTAL and _near_portal():
+		_insert_relics()
+		get_viewport().set_input_as_handled()
+	elif event.keycode == KEY_K and is_instance_valid(owl) and relic_phase < PHASE_FINAL_BOSS:
+		if owl.call("call_owl", player, _owl_hint()):
 			_update_hud()
 			get_viewport().set_input_as_handled()
-		elif event.keycode == KEY_O and owl.call("interact", relic_count):
-			_update_hud()
-			get_viewport().set_input_as_handled()
+
+func _owl_hint() -> String:
+	if relic_count == 0:
+		return "Collect the relic dropped by the Ash Warden."
+	if relic_count == 1:
+		return "find the relic in C 101"
+	if relic_count == 2:
+		return "find the relic around A block"
+	return "rush to the roof of D block and break the portal"
+
+func _near_portal() -> bool:
+	var world := get_parent().get_node_or_null("ShadowBreach")
+	if world == null or not is_instance_valid(player):
+		return false
+	var point: Vector3 = world.gate_point
+	var offset := player.global_position - point
+	return Vector2(offset.x, offset.z).length() < 3.6 and absf(offset.y) < 2.4
 
 func _start_encounter() -> void:
 	active = true
@@ -186,8 +236,12 @@ func _enemy_defeated(identity: int) -> void:
 	if stage == STAGES.size() - 1:
 		boss_bar.hide()
 		boss_title.hide()
-		relic_phase = 1
-		_place_relic()
+		relic_phase = PHASE_WARDEN_RELIC
+		_place_relic_at(boss.global_position + Vector3(0.8, 0.8, 0.1), "WardenRelic", "ASH WARDEN RELIC")
+		message_label.text = "THE ASH WARDEN HAS FALLEN"
+		message_label.show()
+		_ensure_owl()
+		_start_warden_owl()
 		_update_hud()
 		return
 	stage += 1
@@ -257,14 +311,20 @@ func _build_hud() -> void:
 	boss_title.hide()
 
 func _update_hud() -> void:
-	if relic_phase == 3:
-		var owl_hint := "Watch the Owl." if is_instance_valid(owl) and owl.get("is_intro") else "Press K to call the Owl. Press O when it asks about the relics."
-		objective.text = "MUTANT DEFEATED\n%d/5 relics collected. %s" % [relic_count, owl_hint]
-		return
-	if relic_phase == 1:
-		objective.text = "FIND ROOM C-101\nBlock C, first floor. Take the central stairs between D and C."
-	elif relic_phase == 2:
-		objective.text = "1/5 RELICS COLLECTED\nDefeat the Mutant in the hallway. Parry punches; Shadow Dash (Q) through its jump attack."
+	if relic_phase == PHASE_WARDEN_RELIC:
+		objective.text = "ASH WARDEN DEFEATED\nCollect the relic he dropped. Then find the next in C-101."
+	elif relic_phase == PHASE_C101_RELIC:
+		objective.text = "1/3 RELICS\nFind room C-101, Block C first floor. Press K to call the Owl."
+	elif relic_phase == PHASE_MUTANT:
+		objective.text = "2/3 RELICS\nDefeat the Mutant in the hallway. The final relic is around A block."
+	elif relic_phase == PHASE_A_RELIC:
+		objective.text = "2/3 RELICS\nFind the final relic by A block's domed entrance and fountain."
+	elif relic_phase == PHASE_PORTAL:
+		objective.text = "3/3 RELICS\nReach the exposed roof of D block. Press O near the portal."
+	elif relic_phase == PHASE_FINAL_BOSS:
+		objective.text = "BARA USTAAD\nDefeat him on D block's roof. Parry his strikes."
+	elif relic_phase == PHASE_COMPLETE:
+		objective.text = "PORTAL DEFENDER DEFEATED\nAll three relics have been brought to the portal."
 	else:
 		var data: Dictionary = STAGES[stage]
 		var distance := player.global_position.distance_to(data.trigger)
@@ -272,24 +332,39 @@ func _update_hud() -> void:
 		if active and not get_tree().get_nodes_in_group("mage").is_empty():
 			hint = "Parry violet orbs into fireballs. Face the group to return an explosive blast."
 		objective.text = "%d / %d  %s\n%s\n%s" % [stage + 1, STAGES.size(), data.name, hint, ("Shadows remaining: %d" % alive) if active else ("Follow the amber beacon — %dm" % int(distance))]
-	var shown_boss: CharacterBody3D = mutant if relic_phase >= 2 else boss
-	if is_instance_valid(shown_boss) and not shown_boss.is_dead and (relic_phase < 2 or bool(shown_boss.get("engaged"))):
+	var shown_boss: CharacterBody3D = null
+	if relic_phase == 0:
+		shown_boss = boss
+	elif relic_phase == PHASE_MUTANT:
+		shown_boss = mutant
+	elif relic_phase == PHASE_FINAL_BOSS:
+		shown_boss = bara
+	if is_instance_valid(shown_boss) and not shown_boss.is_dead and (relic_phase == 0 or bool(shown_boss.get("engaged"))):
 		boss_bar.show()
 		boss_title.show()
 		boss_bar.max_value = shown_boss.max_health
 		boss_bar.value = shown_boss.current_health
-		boss_title.text = ("THE MUTANT" + ("  -  RENEWED" if bool(shown_boss.get("flexed")) else "")) if relic_phase >= 2 else ("THE ASH WARDEN" + ("  -  UNBOUND" if boss.enraged else ""))
+		if shown_boss == bara:
+			boss_title.text = "BARA USTAAD"
+		elif shown_boss == mutant:
+			boss_title.text = "THE MUTANT" + ("  -  RENEWED" if bool(mutant.get("flexed")) else "")
+		else:
+			boss_title.text = "THE ASH WARDEN" + ("  -  UNBOUND" if boss.enraged else "")
 		shown_boss.health_bar.hide()
-	elif relic_phase >= 1:
+	else:
 		boss_bar.hide()
 		boss_title.hide()
 
 func _place_relic() -> void:
 	var room := get_parent().get_node(RELIC_ROOM_PATH) as Node3D
+	_place_relic_at(room.to_global(RELIC_LOCAL), "C101Relic", "ROOM C-101")
+
+func _place_relic_at(world_position: Vector3, relic_name: String, marker_text: String) -> void:
 	relic = Node3D.new()
-	relic.name = "C101Relic"
-	room.add_child(relic)
-	relic.position = RELIC_LOCAL
+	relic.name = relic_name
+	add_child(relic)
+	relic.global_position = world_position
+	relic_base_y = world_position.y
 	var sphere := MeshInstance3D.new()
 	sphere.name = "GlowingRelic"
 	var mesh := SphereMesh.new()
@@ -307,32 +382,67 @@ func _place_relic() -> void:
 	relic.add_child(halo)
 	if marker:
 		marker.queue_free()
-	_set_marker(relic.global_position - Vector3.UP * 0.8, "ROOM C-101")
+	_set_marker(relic.global_position - Vector3.UP * 0.8, marker_text)
 
 func _collect_relic() -> void:
-	relic_phase = 2
-	relic_count = 1
+	if not is_instance_valid(relic):
+		return
+	var collected_phase := relic_phase
 	relic.queue_free()
 	relic = null
 	pickup_prompt.hide()
 	if marker:
 		marker.queue_free()
 		marker = null
-	message_label.text = "1/5 relics collected"
+	relic_count += 1
+	message_label.text = "%d/3 relics collected" % relic_count
 	message_label.show()
 	if is_instance_valid(player):
 		player.call("_add_camera_trauma", 0.28)
-	_place_mutant()
+	if collected_phase == PHASE_WARDEN_RELIC:
+		relic_phase = PHASE_C101_RELIC
+		_place_relic()
+	elif collected_phase == PHASE_C101_RELIC:
+		relic_phase = PHASE_MUTANT
+		pending_mutant_spawn = true
+		_ensure_owl()
+		owl.call("start_story", player, SECOND_OWL_LINES, SECOND_OWL_DURATIONS)
+	elif collected_phase == PHASE_A_RELIC:
+		relic_phase = PHASE_PORTAL
+		_ensure_owl()
+		owl.call("start_story", player, THIRD_OWL_LINES, THIRD_OWL_DURATIONS)
 	_update_hud()
-	await get_tree().create_timer(1.6).timeout
-	if not is_inside_tree() or relic_phase != 2:
-		return
-	message_label.text = "The stolen relic has alerted the Mutant"
-	if is_instance_valid(player):
-		player.call("_add_camera_trauma", 0.14)
-	await get_tree().create_timer(3.0).timeout
-	if is_inside_tree() and relic_phase == 2:
+	if collected_phase == PHASE_WARDEN_RELIC:
+		_hide_message_after(2.0, message_label.text)
+
+func _hide_message_after(seconds: float, expected_text: String) -> void:
+	await get_tree().create_timer(seconds, false).timeout
+	if is_inside_tree() and message_label.text == expected_text:
 		message_label.hide()
+
+func _ensure_owl() -> void:
+	if is_instance_valid(owl):
+		return
+	owl = OWL.new() as Node3D
+	owl.name = "OwlCompanion"
+	add_child(owl)
+	owl.connect("orbit_finished", _owl_orbit_finished)
+	owl.connect("story_finished", _owl_story_finished)
+
+func _start_warden_owl() -> void:
+	if player.is_using_ultimate:
+		await player.ultimate_controller.ultimate_finished
+	if is_inside_tree() and relic_phase == PHASE_WARDEN_RELIC and is_instance_valid(player) and player.is_alive:
+		owl.call("start_story", player, FIRST_OWL_LINES, FIRST_OWL_DURATIONS)
+
+func _owl_story_finished() -> void:
+	if pending_mutant_spawn and relic_phase == PHASE_MUTANT:
+		pending_mutant_spawn = false
+		_place_mutant()
+		message_label.text = "The second relic has alerted the Mutant"
+		message_label.show()
+		_hide_message_after(3.0, message_label.text)
+	_update_hud()
 
 func _place_mutant() -> void:
 	var room := get_parent().get_node(RELIC_ROOM_PATH) as Node3D
@@ -355,7 +465,7 @@ func _place_mutant() -> void:
 	gremlin_wave_timer.start()
 
 func _spawn_gremlin_wave() -> void:
-	if relic_phase != 2 or not player.is_alive or not is_instance_valid(mutant) or mutant.is_dead:
+	if relic_phase != PHASE_MUTANT or not player.is_alive or not is_instance_valid(mutant) or mutant.is_dead:
 		return
 	gremlins = gremlins.filter(func(enemy: CharacterBody3D) -> bool: return is_instance_valid(enemy) and not enemy.is_dead)
 	var room := get_parent().get_node(RELIC_ROOM_PATH) as Node3D
@@ -370,7 +480,7 @@ func _spawn_gremlin_wave() -> void:
 		gremlins.append(gremlin)
 
 func _mutant_defeated() -> void:
-	if completed:
+	if relic_phase != PHASE_MUTANT:
 		return
 	if is_instance_valid(gremlin_wave_timer):
 		gremlin_wave_timer.stop()
@@ -378,25 +488,59 @@ func _mutant_defeated() -> void:
 		if is_instance_valid(gremlin):
 			gremlin.queue_free()
 	gremlins.clear()
-	relic_phase = 3
-	completed = true
+	relic_phase = PHASE_A_RELIC
 	boss_bar.hide()
 	boss_title.hide()
-	message_label.text = "THE MUTANT HAS FALLEN"
+	message_label.text = "THE MUTANT HAS FALLEN — SEARCH A BLOCK"
 	message_label.show()
-	owl = OWL.new() as Node3D
-	owl.name = "OwlCompanion"
-	add_child(owl)
-	owl.connect("orbit_finished", _owl_orbit_finished)
-	owl.connect("intro_finished", _owl_intro_finished)
-	owl.call("start_intro", player)
+	_place_relic_at(A_BLOCK_RELIC, "ABlockRelic", "A BLOCK ENTRANCE")
+	_hide_message_after(3.0, message_label.text)
 	_update_hud()
 
 func _owl_orbit_finished() -> void:
 	message_label.hide()
 
-func _owl_intro_finished() -> void:
+func _insert_relics() -> void:
+	if relic_phase != PHASE_PORTAL or relic_count != 3:
+		return
+	relic_phase = PHASE_FINAL_BOSS
+	pickup_prompt.hide()
+	message_label.text = "THE THREE RELICS OPEN THE PORTAL"
+	message_label.show()
+	get_parent().get_node("ShadowBreach").energize_with_relics(player.global_position)
+	arrival = BARA_ARRIVAL.new() as Node3D
+	arrival.name = "BaraUstaadArrival"
+	get_parent().add_child(arrival)
+	arrival.connect("landed", _bara_landed)
+	arrival.call("begin", player)
+	bara = arrival.get("boss") as CharacterBody3D
+	bara.died.connect(_bara_defeated)
 	_update_hud()
+
+func _bara_landed(_actor: CharacterBody3D) -> void:
+	message_label.text = "BARA USTAAD"
+	message_label.show()
+	_hide_message_after(2.5, message_label.text)
+	_update_hud()
+
+func _bara_defeated() -> void:
+	if relic_phase != PHASE_FINAL_BOSS:
+		return
+	relic_phase = PHASE_COMPLETE
+	completed = true
+	boss_bar.hide()
+	boss_title.hide()
+	message_label.text = "BARA USTAAD HAS FALLEN"
+	message_label.show()
+	_update_hud()
+	_finish_portal()
+
+func _finish_portal() -> void:
+	var world := get_parent().get_node_or_null("ShadowBreach")
+	if is_instance_valid(world):
+		await world.restore_campus(2.5)
+	if is_inside_tree() and is_instance_valid(player) and player.is_alive:
+		get_parent().show_victory()
 
 func _emissive(color: Color, energy: float) -> StandardMaterial3D:
 	var material := StandardMaterial3D.new()

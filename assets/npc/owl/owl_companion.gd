@@ -4,16 +4,9 @@ extends Node3D
 signal intro_finished
 signal visit_finished
 signal orbit_finished
+signal story_finished
 
 const OWL_SCENE := preload("res://assets/npc/owl/owl.glb")
-const INTRO_LINES := [
-	"salam ustaad",
-	"you have just found a relic, collect 4 more of these, and then with the relics and my powers, we can make a time machine",
-	"with that, we can reverse the meteor attack and bring back peace at FAST",
-]
-const INTRO_DURATIONS := [3.0, 5.0, 5.0]
-const QUESTION := "Did you get all 5 relics?"
-const SUCCESS := "Great, go to the Nascon Ground and use the time machine!"
 const ORBIT_RADIUS := 1.4
 const ORBIT_HEIGHT := 2.35
 
@@ -27,6 +20,8 @@ var state := "hidden"
 var is_intro := false
 var elapsed := 0.0
 var line_index := 0
+var dialogue_lines: Array[String] = []
+var dialogue_durations: Array[float] = []
 var orbit_duration := 2.8
 var orbit_start := 0.0
 var hold_offset := Vector3.ZERO
@@ -35,6 +30,7 @@ var saved_physics := true
 var saved_input := true
 var saved_unhandled := true
 var poof_node: Node3D
+var fade_tween: Tween
 
 func _ready() -> void:
 	process_mode = Node.PROCESS_MODE_PAUSABLE
@@ -89,23 +85,38 @@ func _build_bubble() -> void:
 	rows.add_child(hint)
 	bubble.hide()
 
-func start_intro(target: Node3D) -> void:
-	if state != "hidden" or intro_seen:
+func start_story(target: Node3D, lines: Array[String], durations: Array[float]) -> void:
+	if lines.is_empty() or lines.size() != durations.size():
 		return
+	_interrupt_current()
 	player = target
 	is_intro = true
+	dialogue_lines = lines.duplicate()
+	dialogue_durations = durations.duplicate()
 	orbit_duration = 2.8
 	_start_orbit()
 	_lock_player()
 
-func call_owl(target: Node3D) -> bool:
+func call_owl(target: Node3D, message: String) -> bool:
 	if not intro_seen or state != "hidden":
 		return false
 	player = target
 	is_intro = false
+	dialogue_lines = [message]
+	dialogue_durations = [4.0]
 	orbit_duration = 2.3
 	_start_orbit()
 	return true
+
+func _interrupt_current() -> void:
+	if is_intro and state != "hidden":
+		_unlock_player()
+	if is_instance_valid(fade_tween):
+		fade_tween.kill()
+	if is_instance_valid(poof_node):
+		poof_node.queue_free()
+	poof_node = null
+	state = "hidden"
 
 func _start_orbit() -> void:
 	state = "orbit"
@@ -130,33 +141,29 @@ func _process(delta: float) -> void:
 		_update_orbit(minf(elapsed / orbit_duration, 1.0))
 		if elapsed >= orbit_duration:
 			orbit_finished.emit()
-			if is_intro:
-				line_index = 0
-				_show_line(INTRO_LINES[0])
-			else:
-				state = "waiting"
-				_show_bubble(QUESTION, "O  INTERACT")
-	elif state == "line" and elapsed >= INTRO_DURATIONS[line_index]:
+			line_index = 0
+			_show_line(dialogue_lines[0])
+	elif state == "line" and elapsed >= dialogue_durations[line_index]:
 		line_index += 1
-		if line_index < INTRO_LINES.size():
-			_show_line(INTRO_LINES[line_index])
+		if line_index < dialogue_lines.size():
+			_show_line(dialogue_lines[line_index])
 		else:
-			intro_seen = true
-			_unlock_player()
+			if is_intro:
+				intro_seen = true
+				_unlock_player()
 			_start_poof()
-	elif state == "answer" and elapsed >= 4.0:
-		_start_poof()
 	elif state == "poof" and elapsed >= 0.65:
 		state = "hidden"
 		if is_instance_valid(poof_node):
 			poof_node.queue_free()
 		poof_node = null
-		if intro_seen and is_intro:
+		if is_intro:
 			is_intro = false
 			intro_finished.emit()
+			story_finished.emit()
 		else:
 			visit_finished.emit()
-	elif state == "waiting" or state == "line" or state == "answer":
+	elif state == "line":
 		global_position = player.global_position + hold_offset + Vector3.UP * (ORBIT_HEIGHT + sin(Time.get_ticks_msec() * 0.003) * 0.08)
 		_update_bubble_position()
 
@@ -189,17 +196,6 @@ func _update_bubble_position() -> void:
 	var screen := camera.unproject_position(global_position + Vector3.UP * 0.8)
 	var size := bubble.get_combined_minimum_size()
 	bubble.position = Vector2(clampf(screen.x - size.x * 0.5, 12.0, get_viewport().get_visible_rect().size.x - size.x - 12.0), clampf(screen.y - size.y - 28.0, 12.0, get_viewport().get_visible_rect().size.y - size.y - 12.0))
-
-func interact(relics: int) -> bool:
-	if state != "waiting":
-		return false
-	if relics >= 5:
-		state = "answer"
-		elapsed = 0.0
-		_show_bubble(SUCCESS, "")
-	else:
-		_start_poof()
-	return true
 
 func _start_poof() -> void:
 	state = "poof"
@@ -244,9 +240,9 @@ func _start_poof() -> void:
 		tween.set_parallel(true)
 		tween.tween_property(mote, "position", direction * 0.8, 0.55).set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
 		tween.tween_property(material, "albedo_color:a", 0.0, 0.55)
-	var fade := create_tween()
-	fade.tween_property(model, "scale", Vector3.ONE * 0.003, 0.2).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_IN)
-	fade.tween_callback(model.hide)
+	fade_tween = create_tween()
+	fade_tween.tween_property(model, "scale", Vector3.ONE * 0.003, 0.2).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_IN)
+	fade_tween.tween_callback(model.hide)
 
 func _lock_player() -> void:
 	saved_physics = player.is_physics_processing()
@@ -266,5 +262,5 @@ func _unlock_player() -> void:
 	player.set_process_unhandled_input(saved_unhandled)
 
 func _exit_tree() -> void:
-	if is_intro and not intro_seen:
+	if is_intro and state != "hidden":
 		_unlock_player()

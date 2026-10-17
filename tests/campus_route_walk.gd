@@ -9,7 +9,12 @@ func walk_to(point: Vector3) -> void:
 	var start := Time.get_ticks_msec()
 	while Vector2(player.position.x - point.x, player.position.z - point.z).length() > 0.25:
 		for enemy in get_nodes_in_group("enemy"):
-			enemy.take_damage(99999.0, player)
+			if director.stage == 4 and enemy == director.boss:
+				# Reaching the Warden is the route goal. Killing him starts the
+				# Owl cutscene, which deliberately locks player movement.
+				enemy.set_physics_process(false)
+			else:
+				enemy.take_damage(99999.0, player)
 		var offset := point - player.position
 		# Camera yaw zero: use analogue action strengths for a diagonal path.
 		Input.action_release("move_right")
@@ -37,5 +42,6 @@ func run() -> void:
 	await create_timer(0.4).timeout
 	for p in [Vector3(35,0,-74.55), Vector3(39,0,-74.55), Vector3(44.5,0,-74.55), Vector3(49,0,-74.55), Vector3(49,0,-83), Vector3(49,0,-96), Vector3(49,0,-108)]:
 		await walk_to(p)
+	assert(director.stage == 4 and director.active and director.relic_phase == 0)
 	print("PASS continuous courtyard-to-boss route without teleporting or jumping")
 	quit()

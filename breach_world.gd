@@ -19,6 +19,7 @@ var portal_light: OmniLight3D
 var impact_light: OmniLight3D
 var scorch: MeshInstance3D
 var clock := 0.0
+var relic_charge := 0.0
 var cinematic := false
 var impact_started := false
 var shield: MeshInstance3D
@@ -226,11 +227,47 @@ func show_aftermath() -> void:
 
 func _process(delta: float) -> void:
 	clock += delta
-	portal_light.light_energy = 2.7 + sin(clock * 2.2) * 0.45
+	relic_charge = move_toward(relic_charge, 0.0, delta * 2.2)
+	portal_light.light_energy = 2.7 + sin(clock * 2.2) * 0.45 + relic_charge
 
+func energize_with_relics(from_position: Vector3) -> void:
+	relic_charge = 5.0
+	shield_material.albedo_color.a = 0.65
+	var pulse := create_tween()
+	pulse.tween_property(shield_material, "albedo_color:a", 0.0, 1.4)
+	FX.ring(get_parent(), gate_point + Vector3.UP * 1.3, Color(0.5, 0.85, 1.0), 2.8)
+	var sound := AudioStreamPlayer3D.new()
+	sound.name = "RelicPortalSound"
+	sound.stream = preload("res://breach_audio.gd").cue("portal")
+	sound.volume_db = -5.0
+	sound.position = gate_point
+	add_child(sound)
+	sound.finished.connect(sound.queue_free)
+	sound.play()
+	for index in 3:
+		var mote := MeshInstance3D.new()
+		mote.name = "InsertedRelic%d" % (index + 1)
+		var sphere := SphereMesh.new()
+		sphere.radius = 0.13
+		sphere.height = 0.26
+		mote.mesh = sphere
+		var material := StandardMaterial3D.new()
+		material.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+		material.albedo_color = Color(0.34, 0.8, 1.0)
+		material.emission_enabled = true
+		material.emission = Color(0.4, 0.8, 1.0)
+		material.emission_energy_multiplier = 3.0
+		mote.material_override = material
+		add_child(mote)
+		mote.global_position = from_position + Vector3.UP * (1.1 + index * 0.15)
+		var destination := gate_point + Vector3.UP * (2.1 + index * 0.65)
+		var flight := create_tween()
+		flight.tween_interval(index * 0.12)
+		flight.tween_property(mote, "global_position", destination, 0.8).set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_IN)
+		flight.tween_property(mote, "scale", Vector3.ZERO, 0.2)
+		flight.tween_callback(mote.queue_free)
 
-## Future ending hook: call only after the full relic quest/time machine exists.
-## No current encounter or single relic triggers this automatically.
+## Restore the campus after the final defender has fallen.
 func restore_campus(seconds: float = 2.5) -> void:
 	if destruction.destroyed:
 		destruction.reverse_destruction(seconds)

@@ -3,6 +3,7 @@ extends SceneTree
 const OWL := preload("res://assets/npc/owl/owl_companion.gd")
 var owl: Node3D
 var player: Node3D
+var stories := 0
 
 func _initialize() -> void:
 	call_deferred("run")
@@ -14,7 +15,6 @@ func check(condition: bool, message: String) -> void:
 		assert(condition, message)
 
 func advance(seconds: float) -> void:
-	# Drive the Owl's state machine without waiting through the dialogue in real time.
 	owl.call("_process", seconds)
 
 func run() -> void:
@@ -31,31 +31,40 @@ func run() -> void:
 	owl = OWL.new() as Node3D
 	scene.add_child(owl)
 	owl.set_process(false)
-	check(owl.get("state") == "hidden", "Owl should start hidden")
-	check(not owl.call("call_owl", player), "Owl must not be callable before the introduction")
-	owl.call("start_intro", player)
-	check(owl.get("state") == "orbit", "Introduction must start with a flight")
+	owl.connect("story_finished", func(): stories += 1)
+	check(not owl.call("call_owl", player, "find the relic in C 101"), "Owl must not be callable before Warden defeat")
+	var first_lines: Array[String] = [
+		"Salam Ustaad", "Ki Haal hai", "you have found the first relic",
+		"Collect all 3 relics to break the portal and bring back peace at FAST",
+		"find the next relic in C 101",
+	]
+	var first_durations: Array[float] = [3.0, 3.0, 3.0, 5.0, 4.0]
+	owl.call("start_story", player, first_lines, first_durations)
+	check(owl.get("state") == "orbit", "First story must begin with one circle")
 	advance(2.8)
-	check(owl.get("speech").text == "salam ustaad", "First line should appear after one orbit")
-	advance(3.0)
-	check(owl.get("speech").text == "you have just found a relic, collect 4 more of these, and then with the relics and my powers, we can make a time machine", "Second line should follow after three seconds")
-	advance(5.0)
-	check(owl.get("speech").text == "with that, we can reverse the meteor attack and bring back peace at FAST", "Third line should follow after five seconds")
-	advance(5.0)
-	check(owl.get("state") == "poof" and owl.get("poof_node") != null, "Owl should poof after the dialogue")
+	for index in first_lines.size():
+		check(owl.get("speech").text == first_lines[index], "Wrong first-story line %d" % index)
+		advance(first_durations[index])
+	check(owl.get("state") == "poof" and owl.get("poof_node") != null, "Story must end with visible poof")
 	advance(0.65)
-	check(owl.get("state") == "hidden" and owl.get("intro_seen"), "Owl should become callable after its introduction")
-	check(owl.call("call_owl", player), "K should summon the Owl")
+	check(stories == 1 and owl.get("intro_seen"), "Owl should become callable after first story")
+	check(owl.call("call_owl", player, "find the relic in C 101"), "K should call the Owl")
 	advance(2.3)
-	check(owl.get("state") == "waiting" and owl.get("speech").text == "Did you get all 5 relics?", "Summoned Owl should ask about relics")
-	check(owl.call("interact", 1), "O should answer the Owl")
-	check(owl.get("state") == "poof", "Owl should leave when fewer than five relics are held")
-	advance(0.65)
-	check(owl.call("call_owl", player), "Owl should be summonable again")
-	advance(2.3)
-	check(owl.call("interact", 5), "O should answer the Owl with five relics")
-	check(owl.get("speech").text == "Great, go to the Nascon Ground and use the time machine!", "Owl should give the Nascon Ground direction")
+	check(owl.get("speech").text == "find the relic in C 101", "Owl should give the current clue")
 	advance(4.0)
-	check(owl.get("state") == "poof", "Owl should poof after the success line")
-	print("PASS Owl orbit, timed dialogue, poof, summon and both relic outcomes")
+	advance(0.65)
+	check(owl.call("call_owl", player, "find the relic around A block"), "Owl should be callable again")
+	advance(2.3)
+	check(owl.get("speech").text == "find the relic around A block", "Owl should update the clue")
+	advance(4.0)
+	advance(0.65)
+	var final_lines: Array[String] = ["Great, you have found all relics, rush to the roof of D block and break the portal"]
+	var final_durations: Array[float] = [5.0]
+	owl.call("start_story", player, final_lines, final_durations)
+	advance(2.8)
+	check(owl.get("speech").text == final_lines[0], "Final story must point to D block roof")
+	advance(5.0)
+	advance(0.65)
+	check(stories == 2 and owl.get("state") == "hidden", "Final Owl story must finish cleanly")
+	print("PASS Owl timed first story, stage clues, circling and poof")
 	quit()

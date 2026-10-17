@@ -53,7 +53,18 @@ func run() -> void:
 	scene = current_scene
 	player = scene.get_node("Player")
 	check(not player.is_using_ultimate and player.ultimate_controller.charge == 0.0, "New Game must reset reserve and cinematic state")
-	check(root.get_camera_3d() == player.camera, "New Game must restore the normal player camera")
+	check(is_instance_valid(scene.opening_intro), "New Game must start the opening cinematic")
+	await key(KEY_SPACE)
+	check(not is_instance_valid(scene.opening_intro), "Space must skip the new opening cinematic")
+	check(root.get_camera_3d() == player.camera, "Skipping the opening must restore the normal player camera")
+	await create_timer(0.4).timeout
+	check(player.is_on_floor() and scene.session_started and not paused, "Skipped opening must leave a grounded player in gameplay")
+	var director: Node = scene.get_node("EncounterDirector")
+	if not director.active:
+		director._start_encounter()
+	var focused_target := get_nodes_in_group("enemy")[0] as Node3D
+	focused_target.set_physics_process(false)
+	focused_target.global_position = player.global_position + player.character.global_basis.z * 3.0
 	await key(KEY_R)
 	await key(KEY_R)
 	await key(KEY_G)
