@@ -147,6 +147,9 @@ func _prepare_daylight() -> void:
 	_update_lighting(0)
 
 func _update_lighting(daylight: float) -> void:
+	var exterior := get_parent().get_node("CampusMap").get_node_or_null("ExteriorAtmosphere")
+	if exterior != null:
+		exterior.set_daylight_progress(daylight)
 	for state in sunlight:
 		var light: DirectionalLight3D = state[0].get_ref()
 		if is_instance_valid(light):
@@ -156,6 +159,7 @@ func _update_lighting(daylight: float) -> void:
 		var live: Environment = state[1]
 		var night: Environment = state[2]
 		var day: Environment = state[3]
+		live.volumetric_fog_enabled = daylight < 0.995
 		for property in ["ambient_light_color", "fog_light_color"]:
 			live.set(property, night.get(property).lerp(day.get(property), daylight))
 		for property in ["ambient_light_energy", "fog_density", "fog_sky_affect", "adjustment_saturation"]:

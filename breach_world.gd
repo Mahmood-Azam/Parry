@@ -291,6 +291,7 @@ func _restore_daylight() -> void:
 		daylight.ambient_light_color = Color(0.72, 0.80, 0.94)
 		daylight.ambient_light_energy = 1.0
 		daylight.fog_density = 0.0015
+		daylight.volumetric_fog_enabled = false
 		daylight.fog_light_color = Color(0.67, 0.79, 0.94)
 		daylight.fog_sky_affect = 0.0
 		daylight.adjustment_saturation = 1.0
@@ -301,6 +302,9 @@ func _restore_daylight() -> void:
 			sky.ground_horizon_color = Color(0.66, 0.78, 0.9)
 			sky.ground_bottom_color = Color(0.28, 0.31, 0.32)
 		node.environment = daylight
+	var exterior := campus.get_node_or_null("ExteriorAtmosphere")
+	if exterior != null:
+		exterior.set_daylight_progress(1.0)
 	for light: DirectionalLight3D in campus.find_children("*", "DirectionalLight3D", true, false):
 		light.light_color = Color(1.0, 0.91, 0.76)
 		light.light_energy = 1.4

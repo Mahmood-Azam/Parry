@@ -39,6 +39,9 @@ func _ready() -> void:
 		if start_mode is String and start_mode == "intro":
 			_show_home()
 			_start_new_game_intro.call_deferred()
+		elif start_mode is String and start_mode == "boss":
+			_show_home()
+			_start_last_boss_test.call_deferred()
 		else:
 			_continue_game()
 	else:
@@ -96,6 +99,7 @@ func _build_menu() -> void:
 	home_box.add_child(lore)
 	_add_button(home_box, "NEW GAME", Callable(self, "_new_game"))
 	_add_button(home_box, "CONTINUE", Callable(self, "_continue_game"))
+	_add_button(home_box, "TEST: LAST BOSS", Callable(self, "_skip_to_last_boss"))
 	_add_button(home_box, "OPTIONS", Callable(self, "_show_options"))
 	_add_button(home_box, "QUIT", Callable(self, "_quit_game"))
 	var promise := Label.new()
@@ -512,6 +516,24 @@ func _new_game() -> void:
 	get_tree().root.set_meta(START_GAME_META, "intro")
 	get_tree().paused = false
 	get_tree().reload_current_scene()
+
+
+func _skip_to_last_boss() -> void:
+	get_tree().root.set_meta(START_GAME_META, "boss")
+	get_tree().paused = false
+	get_tree().reload_current_scene()
+
+
+func _start_last_boss_test() -> void:
+	_continue_game()
+	var player := get_node("Player") as CharacterBody3D
+	var director := get_node("EncounterDirector")
+	player.global_position = breach_world.gate_point + Vector3(0.0, 0.1, 1.0)
+	player.velocity = Vector3.ZERO
+	director.relic_count = 3
+	director.relic_phase = director.PHASE_PORTAL
+	director.stage = director.STAGES.size() - 1
+	director._insert_relics()
 
 func _start_new_game_intro() -> void:
 	if opening_loading:

@@ -8,9 +8,6 @@ var foliage_chunks: Array[MultiMeshInstance3D] = []
 var foliage_base_ranges: Array[float] = []
 var surface_materials: Array[ShaderMaterial] = []
 var environment: Environment
-var world_environment: WorldEnvironment
-var fog_check_clock := 0.0
-var outdoor_fog := true
 var source_instances: int = 0
 var rendered_instances: int = 0
 var batched_mesh_count: int = 0
@@ -52,7 +49,6 @@ func _ready() -> void:
 				surface_materials.append(surface_material)
 	_batch_static_boxes(static_bins)
 	for node in find_children("*", "WorldEnvironment", true, false):
-		world_environment = node
 		environment = node.environment.duplicate(true)
 		node.environment = environment
 		_setup_night()
@@ -72,22 +68,9 @@ func _ready() -> void:
 	config.load("user://shadowborn_graphics.cfg")
 	apply_quality(int(config.get_value("graphics", "quality", 0)), false)
 	apply_render_distance(int(config.get_value("graphics", "render_distance", 1)), false)
-
-
-func _process(delta: float) -> void:
-	if not is_instance_valid(world_environment) or world_environment.environment != environment:
-		return # The ending swaps to its own daylight environment.
-	fog_check_clock -= delta
-	if fog_check_clock <= 0.0:
-		fog_check_clock = 0.35
-		var camera := get_viewport().get_camera_3d()
-		if camera != null:
-			var start := camera.global_position
-			var query := PhysicsRayQueryParameters3D.create(start, start + Vector3.UP * 35.0, 1)
-			var on_exposed_roof := start.y >= 6.0 and start.x > 39.0 and start.x < 58.0 and start.z > -106.0 and start.z < -72.0
-			outdoor_fog = on_exposed_roof or get_world_3d().direct_space_state.intersect_ray(query).is_empty()
-	var target := 0.025 if outdoor_fog else 0.0015
-	environment.fog_density = lerpf(environment.fog_density, target, 1.0 - exp(-1.8 * delta))
+	var exterior := preload("res://assets/maps/campus/exterior_atmosphere.gd").new()
+	exterior.name = "ExteriorAtmosphere"
+	add_child(exterior)
 
 func _batch_static_boxes(bins: Dictionary) -> void:
 	# Repeated walls, frames, desks and trim become instanced draw calls. Their
@@ -127,11 +110,14 @@ func _setup_night() -> void:
 	environment.ambient_light_source = Environment.AMBIENT_SOURCE_COLOR
 	environment.ambient_light_color = Color(0.30, 0.39, 0.54)
 	environment.ambient_light_energy = 0.38
-	environment.fog_enabled = true
-	environment.fog_light_color = Color(0.19, 0.25, 0.34)
-	environment.fog_light_energy = 0.9
-	environment.fog_sky_affect = 0.4
-	environment.fog_density = 0.025
+	environment.fog_enabled = false
+	environment.volumetric_fog_enabled = true
+	environment.volumetric_fog_density = 0.0
+	environment.volumetric_fog_length = 55.0
+	environment.volumetric_fog_albedo = Color(0.68, 0.75, 0.84)
+	environment.volumetric_fog_ambient_inject = 0.2
+	environment.volumetric_fog_sky_affect = 0.12
+	environment.volumetric_fog_temporal_reprojection_amount = 0.7
 	environment.tonemap_mode = Environment.TONE_MAPPER_FILMIC
 	environment.glow_enabled = true
 	environment.glow_intensity = 0.65
