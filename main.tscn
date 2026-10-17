@@ -1,11 +1,11 @@
-[gd_scene format=3]
+[gd_scene format=3 uid="uid://chpcs7qm3apuf"]
 
-[ext_resource type="Script" path="res://player_controller.gd" id="1_0xm2m"]
-[ext_resource type="Script" path="res://main.gd" id="5_main"]
+[ext_resource type="Script" uid="uid://cyo82268pkh3d" path="res://player_controller.gd" id="1_0xm2m"]
+[ext_resource type="PackedScene" uid="uid://cytw4q7pob0yy" path="res://assets/animations/Lite Sword and Shield Pack/Knight D Pelegrini.fbx" id="2_1bvp3"]
+[ext_resource type="Script" uid="uid://m88sg6upyn3b" path="res://main.gd" id="5_main"]
 [ext_resource type="PackedScene" path="res://assets/maps/campus/campus.tscn" id="6_campus"]
-[ext_resource type="Script" path="res://assets/maps/campus/campus_runtime.gd" id="7_map_runtime"]
-[ext_resource type="Script" path="res://encounter_director.gd" id="8_encounters"]
-[ext_resource type="PackedScene" path="res://assets/animations/Lite Sword and Shield Pack/Knight D Pelegrini.fbx" id="2_1bvp3"]
+[ext_resource type="Script" uid="uid://ckroio1esx77a" path="res://assets/maps/campus/campus_runtime.gd" id="7_map_runtime"]
+[ext_resource type="Script" uid="uid://bfuncpdswgfeb" path="res://encounter_director.gd" id="8_encounters"]
 
 [sub_resource type="CapsuleShape3D" id="CapsuleShape3D_lquwl"]
 radius = 0.38
@@ -14,11 +14,12 @@ height = 1.8
 [node name="Main" type="Node3D" unique_id=97730360]
 script = ExtResource("5_main")
 
-[node name="CampusMap" parent="." instance=ExtResource("6_campus")]
+[node name="CampusMap" parent="." unique_id=1974086582 instance=ExtResource("6_campus")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.10578346, 0, -0.01084137)
 script = ExtResource("7_map_runtime")
 
 [node name="Player" type="CharacterBody3D" parent="." unique_id=1671350807]
-position = Vector3(35, 0.15, -73)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 35, 0.15, -73)
 script = ExtResource("1_0xm2m")
 
 [node name="CollisionShape3D" type="CollisionShape3D" parent="Player" unique_id=1107804964]
@@ -40,5 +41,5 @@ fov = 58.0
 
 [node name="WarriorKnight" parent="Player" unique_id=1797102545 instance=ExtResource("2_1bvp3")]
 
-[node name="EncounterDirector" type="Node3D" parent="."]
+[node name="EncounterDirector" type="Node3D" parent="." unique_id=1274421218]
 script = ExtResource("8_encounters")

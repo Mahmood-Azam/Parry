@@ -20,6 +20,7 @@ var _screen_count := -1
 var _transition_id := 0
 var _changing_mode := false
 var _windowed_mode: Window.Mode = Window.MODE_WINDOWED
+var _reported_fullscreen := false
 
 
 func _ready() -> void:
@@ -39,15 +40,21 @@ func _ready() -> void:
 	var error := _config.load(SETTINGS_PATH)
 	if error != OK and error != ERR_FILE_NOT_FOUND:
 		push_warning("Display settings could not be loaded: %s" % error_string(error))
-	var saved_value: Variant = _config.get_value("display", "fullscreen", false)
+	var saved_value: Variant = _config.get_value("display", "fullscreen", true)
 	_fullscreen = saved_value if saved_value is bool else false
 	# A launch-time fullscreen request must not be undone by an old preference.
-	if _native_fullscreen() or "--fullscreen" in OS.get_cmdline_args() or "-f" in OS.get_cmdline_args():
+	# Project startup is native fullscreen so the editor cannot embed the game.
+	# The saved windowed choice still wins unless explicitly overridden by CLI.
+	if "--fullscreen" in OS.get_cmdline_args() or "-f" in OS.get_cmdline_args():
 		_fullscreen = true
+	elif "--windowed" in OS.get_cmdline_args() or "-w" in OS.get_cmdline_args():
+		_fullscreen = false
 	_changing_mode = true
 	_poll_display()
 	_apply_fullscreen()
 	_changing_mode = false
+	_reported_fullscreen = get_fullscreen()
+	_window.focus_entered.connect(_restore_fullscreen_on_focus)
 	var timer := Timer.new()
 	timer.name = "DisplayRefreshTimer"
 	timer.wait_time = POLL_SECONDS
@@ -65,20 +72,29 @@ func _native_fullscreen() -> bool:
 
 
 func set_fullscreen(enabled: bool) -> void:
-	if not _changing_mode and enabled == get_fullscreen():
+	if Engine.is_embedded_in_editor():
+		# An already-running embedded session must be restarted after installing
+		# this fix. Never claim that an embedded preview became fullscreen.
+		fullscreen_changed.emit(false)
 		return
-	if enabled and is_instance_valid(_window) and not _native_fullscreen() and not _changing_mode:
+	if not _changing_mode and enabled == get_fullscreen() and enabled == _fullscreen:
+		return
+	if enabled and not _fullscreen and is_instance_valid(_window) and not _native_fullscreen() and not _changing_mode:
 		_windowed_size = _window.size
 		_windowed_position = _window.position
 		_windowed_mode = Window.MODE_MAXIMIZED if _window.mode == Window.MODE_MAXIMIZED else Window.MODE_WINDOWED
 	_fullscreen = enabled
-	_apply_fullscreen()
 	_transition_id += 1
 	var request := _transition_id
 	_changing_mode = true
+	_apply_fullscreen()
 	# Let Windows apply its native mode before updating the checkbox or saving.
-	await get_tree().process_frame
-	await get_tree().process_frame
+	for frame in 12:
+		await get_tree().process_frame
+		if request != _transition_id:
+			return
+		if frame >= 1 and (DisplayServer.get_name() == "headless" or _native_fullscreen() == enabled):
+			break
 	if request != _transition_id:
 		return
 	if DisplayServer.get_name() != "headless":
@@ -90,6 +106,7 @@ func set_fullscreen(enabled: bool) -> void:
 	if error != OK:
 		push_warning("Display settings could not be saved: %s" % error_string(error))
 	fullscreen_changed.emit(_fullscreen)
+	_reported_fullscreen = _fullscreen
 
 
 func _input(event: InputEvent) -> void:
@@ -111,9 +128,9 @@ func _apply_fullscreen() -> void:
 	if _fullscreen:
 		# Do not resize a fullscreen Window: native fullscreen already matches
 		# the desktop, and post-mode size writes can undo a native transition.
-		# Exclusive fullscreen also avoids the editor/window manager treating it
-		# as merely a maximized, still-windowed preview on Windows.
-		_window.mode = Window.MODE_EXCLUSIVE_FULLSCREEN
+		# Borderless native fullscreen stays at desktop resolution and does not
+		# lose its fullscreen mode when Windows switches focus or shows overlays.
+		_window.mode = Window.MODE_FULLSCREEN
 	else:
 		_window.mode = Window.MODE_WINDOWED
 		_window.size = _windowed_size
@@ -125,7 +142,12 @@ func _apply_fullscreen() -> void:
 func _refresh_native_fullscreen() -> void:
 	if _fullscreen and _native_fullscreen():
 		# Native modes size themselves. Reassert only after a monitor change.
-		_window.mode = Window.MODE_EXCLUSIVE_FULLSCREEN
+		_window.mode = Window.MODE_FULLSCREEN
+
+
+func _restore_fullscreen_on_focus() -> void:
+	if _fullscreen and not _changing_mode and not _native_fullscreen() and not Engine.is_embedded_in_editor():
+		set_fullscreen(true)
 
 
 func _poll_display() -> void:
@@ -136,9 +158,10 @@ func _poll_display() -> void:
 		return
 	var screen := clampi(_window.current_screen, 0, count - 1)
 	var native_size := DisplayServer.screen_get_size(screen)
-	if not _changing_mode and _fullscreen != _native_fullscreen():
-		_fullscreen = _native_fullscreen()
-		fullscreen_changed.emit(_fullscreen)
+	if not _changing_mode and _reported_fullscreen != _native_fullscreen():
+		# A temporary native transition must not erase the user's preference.
+		_reported_fullscreen = _native_fullscreen()
+		fullscreen_changed.emit(_reported_fullscreen)
 	if screen == _screen and native_size == _native_size and count == _screen_count:
 		return
 	_screen = screen
@@ -164,6 +187,9 @@ func create_controls(parent: VBoxContainer) -> VBoxContainer:
 	fullscreen_button.name = "Fullscreen"
 	fullscreen_button.text = "Fullscreen"
 	fullscreen_button.tooltip_text = "Toggle with F11 or Alt+Enter"
+	fullscreen_button.disabled = Engine.is_embedded_in_editor()
+	if fullscreen_button.disabled:
+		fullscreen_button.text = "Fullscreen — restart game in native window"
 	fullscreen_button.set_pressed_no_signal(get_fullscreen())
 	fullscreen_button.toggled.connect(set_fullscreen)
 	fullscreen_changed.connect(fullscreen_button.set_pressed_no_signal)

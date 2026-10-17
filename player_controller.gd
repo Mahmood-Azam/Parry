@@ -28,6 +28,7 @@ const SWORD_TRAIL_SCRIPT = preload("res://sword_trail.gd")
 const GROUNDING_SCRIPT = preload("res://locomotion_grounding.gd")
 const FLAME_AURA_SCRIPT = preload("res://flame_aura.gd")
 const CHARGE_AURA_SCRIPT = preload("res://charge_energy_aura.gd")
+const ULTIMATE_SCRIPT = preload("res://ultimate_controller.gd")
 var JUMP_ATTACK_SCENE: PackedScene = load("res://assets/animations/Lite Sword and Shield Pack/sword and shield attack (2).fbx")
 var SWORD_SCENE: PackedScene = load("res://assets/player/weapons/crystal/crystal_elemental_sword.glb")
 var FIRE_AIR_SLASH_SCRIPT: Script = preload("res://fire_air_slash.gd")
@@ -192,6 +193,11 @@ var fire_full_hold_remaining: float = 0.0
 var fire_was_full := false
 var is_fire_channeling: bool = false
 var fire_channel_charge: float = 0.0
+var is_using_ultimate := false
+var ultimate_power := 0.0
+var ultimate_charging := false
+var ultimate_kind := ""
+var ultimate_controller: Node
 var fire_effect_root: Node3D
 var body_fire_effect: Node3D
 var sword_guard_pose: SkeletonModifier3D
@@ -225,6 +231,9 @@ func _ready() -> void:
 	_setup_combat_feedback()
 	_setup_parry_audio()
 	_setup_combat_stats()
+	ultimate_controller = ULTIMATE_SCRIPT.new()
+	ultimate_controller.name = "UltimateController"
+	add_child(ultimate_controller)
 	_setup_weapon_mounts()
 	_setup_fire_blade_effect.call_deferred()
 	locomotion_base_position = character.position
@@ -474,7 +483,7 @@ func _update_combat_stats() -> void:
 	elif parry_cooldown_timer > 0.0:
 		parry_state = "RECOVERY %.2fs" % parry_cooldown_timer
 	var dash_state := "READY" if dash_cooldown_timer <= 0.0 else "COOLDOWN %.2fs" % dash_cooldown_timer
-	var controls_text := "\n\nWASD Move   |   Shift Sprint   |   Ctrl Crouch   |   Space Jump\nF Parry   |   RMB Parry -> Block   |   Q Shadow Dash   |   LMB Attack\nMMB Hold: Channel Fire   |   Release: Air Slash\nV Free Camera   |   P Kill All\nH Show/Hide Controls   |   R Fill Fire" if show_controls_hud else ""
+	var controls_text := "\n\nWASD Move   |   Shift Sprint   |   Ctrl Crouch   |   Space Jump\nF Parry   |   RMB Parry -> Block   |   Q Shadow Dash   |   LMB Attack\nMMB Hold: Channel Fire   |   Release: Air Slash\nE Ultimate: Inferno   |   G Ultimate: Focused Strike\nV Free Camera   |   P Kill All   |   O Collect Relic\nH Show/Hide Controls   |   R Fill Fire" if show_controls_hud else ""
 	combat_stats_label.text = "HP: %d / %d\nPARRY: %s  |  PERFECT: %.2fs / %.2fs  |  RANGE: %.1fm\nFIRE: %d / %d  |  BLADE: %s  |  RIPOSTE: %d/%d\nSHADOW: %s  |  CAMERA: %s%s" % [
 		roundi(current_health), roundi(max_health), parry_state, perfect_parry_window, parry_window, parry_hitbox_radius,
 		roundi(fire_meter), roundi(fire_meter_max), "CHARGING" if is_fire_channeling else ("IGNITED" if fire_meter > 0.0 else "COLD"), parry_chain_count, parries_for_riposte, dash_state, "FREE" if camera_unlocked else "FOLLOW", controls_text
@@ -492,7 +501,7 @@ func _update_combat_stats() -> void:
 			fire_charge_label.text = "FULL FIRE  |  Decay in %.1fs" % fire_full_hold_remaining
 			fire_charge_label.modulate = Color(1.0,0.82,0.26)
 	if fill_fire_button != null:
-		fill_fire_button.disabled = not is_alive
+		fill_fire_button.disabled = not is_alive or is_using_ultimate
 
 
 func _show_combat_feedback(message: String, color: Color) -> void:
@@ -604,6 +613,8 @@ func _add_fire_meter(amount: float) -> void:
 	_update_fire_blade_effect()
 	_update_combat_stats()
 	_show_combat_feedback("PARRY  +FIRE", Color(1.0, 0.38, 0.06))
+	if ultimate_controller != null:
+		ultimate_controller.add_fire(amount)
 
 
 func _find_first_mesh(root: Node) -> MeshInstance3D:
@@ -716,6 +727,8 @@ func _process(_delta: float) -> void:
 
 
 func _input(event: InputEvent) -> void:
+	if is_using_ultimate:
+		return
 	# Capture attack at the earliest input stage. This remains reliable when
 	# the first click also changes mouse capture or when a Control consumes the
 	# event before _unhandled_input receives it.
@@ -731,10 +744,16 @@ func _input(event: InputEvent) -> void:
 
 
 func _unhandled_input(event: InputEvent) -> void:
+	if is_using_ultimate:
+		return
 	# Capture Space at the event boundary as well as through InputMap. This
 	# prevents a jump press from being lost between render and physics ticks.
 	if event is InputEventKey and event.pressed and not event.echo:
 		var key_event := event as InputEventKey
+		if key_event.keycode == KEY_E or key_event.keycode == KEY_G:
+			ultimate_controller.try_activate("area" if key_event.keycode == KEY_E else "focused")
+			get_viewport().set_input_as_handled()
+			return
 		if key_event.keycode == KEY_V:
 			camera_unlocked = not camera_unlocked
 			_show_combat_feedback("FREE CAMERA" if camera_unlocked else "CAMERA FOLLOW", Color(0.35, 0.8, 1.0))
@@ -789,7 +808,7 @@ func _unhandled_input(event: InputEvent) -> void:
 
 
 func _begin_fire_channel() -> void:
-	if not is_alive or is_fire_channeling or fire_meter <= 0.0:
+	if not is_alive or is_using_ultimate or is_fire_channeling or fire_meter <= 0.0:
 		return
 	if is_dashing or attacking or is_parrying or blocking or hit_stun_remaining > 0.0:
 		return
@@ -883,6 +902,9 @@ func _get_fire_slash_direction() -> Vector3:
 
 
 func _physics_process(delta: float) -> void:
+	if is_using_ultimate:
+		velocity = Vector3.ZERO
+		return
 	_update_timers(delta)
 	_update_camera(delta)
 	_update_motion_effects(delta)
@@ -1089,7 +1111,7 @@ func _kill_all_enemies() -> void:
 
 
 func _fill_fire_meter() -> void:
-	if not is_alive:
+	if not is_alive or is_using_ultimate:
 		return
 	fire_meter = fire_meter_max
 	fire_full_hold_remaining = fire_full_hold_duration
@@ -1098,6 +1120,7 @@ func _fill_fire_meter() -> void:
 	_update_combat_stats()
 	_show_combat_feedback("FIRE REFILLED", Color(1.0, 0.65, 0.18))
 	COMBAT_FX.burst(get_tree().current_scene, global_position + Vector3.UP, Color(1.0, 0.42, 0.04), 18, 0.55)
+	ultimate_controller.add_fire(fire_meter_max)
 
 
 func _update_camera(delta: float) -> void:
@@ -1140,6 +1163,8 @@ func _on_animation_finished(animation_name: StringName) -> void:
 
 
 func _begin_attack(animation_name: String) -> void:
+	if is_using_ultimate:
+		return
 	attacking = true
 	is_attacking = true
 	animation_player.speed_scale = 1.0
@@ -1325,7 +1350,7 @@ func _apply_attack_root_motion(animation_name: StringName = "") -> void:
 
 # --- Parry System ---
 func try_start_parry() -> bool:
-	if not is_alive or is_parrying or is_dashing or attacking or is_fire_channeling or parry_cooldown_timer > 0.0:
+	if not is_alive or is_using_ultimate or is_parrying or is_dashing or attacking or is_fire_channeling or parry_cooldown_timer > 0.0:
 		return false
 	if blocking:
 		_end_block()
@@ -1431,11 +1456,13 @@ func _resolve_parry(attacker: Node, attack_data: Dictionary = {}) -> void:
 	if attacker != null and attacker.has_method("apply_stun"):
 		attacker.call("apply_stun", parry_stun_duration)
 	emit_signal("parry_success", attacker, is_perfect, attack_data)
+	if is_instance_valid(attacker) and attacker.has_method("on_parried"):
+		attacker.call("on_parried", self, is_perfect)
 
 
 # --- Shadow Dash ---
 func try_start_dash() -> bool:
-	if not is_alive or is_dashing or dash_cooldown_timer > 0.0:
+	if not is_alive or is_using_ultimate or is_dashing or dash_cooldown_timer > 0.0:
 		return false
 	if is_parrying:
 		_end_parry(false)
@@ -1612,14 +1639,15 @@ func take_damage(amount: float, attacker: Node = null, _attack_type: String = "m
 	if is_invulnerable:
 		emit_signal("damage_evaded", amount, attacker)
 		return false
+	var unparryable := bool(attack_data.get("unparryable", false))
 
 	# 2. Parry Check (facing incoming attack)
-	if is_parrying and is_facing_attack(attacker, attack_data):
+	if is_parrying and not unparryable and is_facing_attack(attacker, attack_data):
 		_resolve_parry(attacker, attack_data)
 		return false
 
 	# 3. Holding block reduces damage without consuming the block stance.
-	var was_blocking := blocking
+	var was_blocking := blocking and not unparryable
 	var final_damage := amount * block_damage_multiplier if was_blocking else amount
 
 	# 4. Take Damage

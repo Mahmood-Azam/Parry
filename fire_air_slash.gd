@@ -47,6 +47,7 @@ var glow: OmniLight3D
 
 
 func _ready() -> void:
+	add_to_group("combat_projectile")
 	process_mode = Node.PROCESS_MODE_PAUSABLE
 	direction = direction.normalized()
 	velocity = direction * speed

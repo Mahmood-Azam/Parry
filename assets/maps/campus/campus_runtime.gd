@@ -10,6 +10,9 @@ var source_instances: int = 0
 var rendered_instances: int = 0
 var batched_mesh_count: int = 0
 var batch_count: int = 0
+var static_visuals: Array[GeometryInstance3D] = []
+var static_extents: Array[float] = []
+var static_shadows: Array[int] = []
 
 func _ready() -> void:
 	process_mode = Node.PROCESS_MODE_PAUSABLE
@@ -24,21 +27,24 @@ func _ready() -> void:
 		elif geometry is MeshInstance3D:
 			var mesh_node := geometry as MeshInstance3D
 			var extent := mesh_node.get_aabb().size.length()
+			static_visuals.append(mesh_node)
+			static_extents.append(extent)
+			static_shadows.append(mesh_node.cast_shadow)
 			# Keep large facades; cull small distant furnishings, rubble and trim.
 			geometry.visibility_range_end = 55.0 if extent < 3.0 else 160.0
 			geometry.visibility_range_end_margin = 5.0
 			if mesh_node.mesh is BoxMesh and extent < 18.0:
 				var box := mesh_node.mesh as BoxMesh
-				var material: Material = mesh_node.material_override if mesh_node.material_override else box.material
+				var box_material: Material = mesh_node.material_override if mesh_node.material_override else box.material
 				var center := mesh_node.global_position
 				var cell := Vector3i(floori(center.x / 20.0), floori(center.y / 8.0), floori(center.z / 20.0))
-				var key := "%s/%s/%s/%s/%s/%s/%s" % [box.size, box.subdivide_width, box.subdivide_height, box.subdivide_depth, material.get_rid() if material else RID(), cell, geometry.visibility_range_end]
+				var key := "%s/%s/%s/%s/%s/%s/%s" % [box.size, box.subdivide_width, box.subdivide_height, box.subdivide_depth, box_material.get_rid() if box_material else RID(), cell, geometry.visibility_range_end]
 				if not static_bins.has(key):
 					static_bins[key] = []
 				static_bins[key].append(mesh_node)
-			var material := mesh_node.material_override as ShaderMaterial
-			if material and material.shader and material.shader.resource_path.ends_with("aged_surface.gdshader") and not surface_materials.has(material):
-				surface_materials.append(material)
+			var surface_material := mesh_node.material_override as ShaderMaterial
+			if surface_material and surface_material.shader and surface_material.shader.resource_path.ends_with("aged_surface.gdshader") and not surface_materials.has(surface_material):
+				surface_materials.append(surface_material)
 	_batch_static_boxes(static_bins)
 	for node in find_children("*", "WorldEnvironment", true, false):
 		environment = node.environment.duplicate(true)
@@ -84,6 +90,9 @@ func _batch_static_boxes(bins: Dictionary) -> void:
 		batch.visibility_range_end_margin = 5.0
 		add_child(batch)
 		batch.global_position = center
+		static_visuals.append(batch)
+		static_extents.append(first.get_aabb().size.length())
+		static_shadows.append(first.cast_shadow)
 		for index in group.size():
 			var original := group[index] as MeshInstance3D
 			multi.set_instance_transform(index, batch.global_transform.affine_inverse() * original.global_transform)
@@ -114,6 +123,18 @@ func _setup_night() -> void:
 
 func apply_quality(value: int, save: bool = true) -> void:
 	quality = clampi(value, 0, 2)
+	# Night-time micro detail accounts for most baked triangles. Culling it
+	# sooner and omitting its shadow pass leaves the buildings and collisions.
+	for index in static_visuals.size():
+		var visual := static_visuals[index]
+		var extent := static_extents[index]
+		if extent < 1.0:
+			visual.visibility_range_end = [35.0, 45.0, 55.0][quality]
+		elif extent < 3.0:
+			visual.visibility_range_end = [50.0, 55.0, 55.0][quality]
+		else:
+			visual.visibility_range_end = 160.0
+		visual.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF if quality == 0 and extent < 1.0 else static_shadows[index]
 	var fractions := [0.22, 0.40, 0.75]
 	var ranges := [22.0, 32.0, 48.0]
 	rendered_instances = 0
@@ -146,9 +167,9 @@ func apply_quality(value: int, save: bool = true) -> void:
 			reduced.instance_count = bins[cell].size()
 			for item in reduced.instance_count:
 				var original: int = bins[cell][item]
-				var transform := source.get_instance_transform(original)
-				transform.origin -= center
-				reduced.set_instance_transform(item, transform)
+				var instance_transform := source.get_instance_transform(original)
+				instance_transform.origin -= center
+				reduced.set_instance_transform(item, instance_transform)
 				if source.use_colors:
 					reduced.set_instance_color(item, source.get_instance_color(original))
 				if source.use_custom_data:

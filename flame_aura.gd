@@ -131,7 +131,9 @@ func refresh() -> void:
 		requested_active = false
 		return
 	var amount: float = controller.fire_channel_charge if kind == "body" else maxf(controller.fire_meter, controller.fire_channel_charge if controller.is_fire_channeling else 0.0)
-	requested_active = controller.is_alive and (controller.is_fire_channeling if kind == "body" else amount > 0.0)
+	if controller.is_using_ultimate:
+		amount = maxf(amount, controller.ultimate_power * controller.fire_meter_max)
+	requested_active = controller.is_alive and ((controller.is_fire_channeling or controller.is_using_ultimate) if kind == "body" else amount > 0.0)
 	requested_power = clampf(amount / maxf(controller.fire_meter_max, 1.0), 0.0, 1.0)
 
 

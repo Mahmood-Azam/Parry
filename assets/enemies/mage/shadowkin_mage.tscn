@@ -1,0 +1,19 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://assets/enemies/mage/shadowkin_mage.gd" id="1"]
+[ext_resource type="PackedScene" path="res://assets/enemies/mage/shadowkin_mage.glb" id="2"]
+
+[sub_resource type="CapsuleShape3D" id="Body"]
+radius = 0.35
+height = 1.85
+
+[node name="ShadowkinMage" type="CharacterBody3D"]
+collision_layer = 4
+collision_mask = 7
+script = ExtResource("1")
+
+[node name="MageModel" parent="." instance=ExtResource("2")]
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="."]
+position = Vector3(0, 0.94, 0)
+shape = SubResource("Body")

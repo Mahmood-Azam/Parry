@@ -2,6 +2,11 @@ extends Node3D
 ## Only the current encounter exists, so distant enemies do not simulate or
 ## chase through walls. Block D's open lobby and central corridor form the route.
 const ENEMY := preload("res://assets/enemies/skeleton/shadow_enemy.tscn")
+const MAGE := preload("res://assets/enemies/mage/shadowkin_mage.tscn")
+const MUTANT := preload("res://assets/enemies/Mutant/mutant_boss.tscn")
+const RELIC_ROOM_PATH := "CampusMap/White Campus Extensions C and D/Block C/Floor 1 central corridor and classrooms/Lecture room C-101"
+const RELIC_LOCAL := Vector3(-3.2, 4.35, -10.0)
+const MUTANT_LOCAL := Vector3(0.5, 3.45, -10.4)
 const STAGES := [
 	{"name": "THE COURTYARD", "hint": "Clear the courtyard. Enter the amber-lit Block D doorway.", "trigger": Vector3(35, 0.1, -74), "spawns": [Vector3(35, 0.15, -79), Vector3(31.5, 0.15, -77)], "gate": Vector3(40.15, 1.6, -74.55), "gate_size": Vector3(0.12, 2.9, 2.4)},
 	{"name": "BLOCK D — ENTRANCE", "hint": "Clear the lobby, then turn right into the long corridor.", "trigger": Vector3(44.5, 0.3, -74.55), "spawns": [Vector3(47, 0.4, -74.55), Vector3(49, 0.4, -77)], "gate": Vector3(49, 1.7, -80), "gate_size": Vector3(2.75, 2.9, 0.12)},
@@ -21,8 +26,14 @@ var objective: Label
 var boss_bar: ProgressBar
 var boss_title: Label
 var boss: CharacterBody3D
+var mutant: CharacterBody3D
 var player: CharacterBody3D
 var ui_clock: float = 0.0
+var relic_phase: int = 0
+var relic_count: int = 0
+var relic: Node3D
+var pickup_prompt: Label
+var message_label: Label
 
 func _ready() -> void:
 	process_mode = Node.PROCESS_MODE_PAUSABLE
@@ -57,23 +68,46 @@ func _ready() -> void:
 		ember.mesh = sphere
 		ember.material_override = _emissive(Color(1.0, 0.32, 0.045), 4.0)
 		lamp.add_child(ember)
+	# Keep the first-floor hallway readable during the Mutant encounter.
+	for p in [Vector3(49.4, 5.5, -61.0), Vector3(49.4, 5.5, -68.0)]:
+		var hallway_light := OmniLight3D.new()
+		hallway_light.position = p
+		hallway_light.light_color = Color(0.67, 0.75, 1.0)
+		hallway_light.light_energy = 1.45
+		hallway_light.omni_range = 5.8
+		hallway_light.shadow_enabled = false
+		add_child(hallway_light)
 	_set_marker()
 	_update_hud()
 
 func _process(delta: float) -> void:
 	if completed or not is_instance_valid(player) or not player.is_alive:
 		return
-	if not active:
+	if relic_phase == 0 and not active:
 		var destination: Vector3 = STAGES[stage].trigger
 		var offset := player.global_position - destination
 		if Vector2(offset.x, offset.z).length() < (4.5 if stage == 0 else 2.5) and absf(offset.y) < 1.6:
 			_start_encounter()
+	if relic_phase == 1 and is_instance_valid(relic):
+		relic.rotate_y(delta * 0.8)
+		relic.position.y = RELIC_LOCAL.y + sin(Time.get_ticks_msec() * 0.002) * 0.12
+		pickup_prompt.visible = player.global_position.distance_to(relic.global_position) < 2.2
+	else:
+		pickup_prompt.hide()
 	ui_clock += delta
 	if marker:
 		marker.rotation.y += delta * 0.8
 	if ui_clock > 0.1:
 		ui_clock = 0.0
 		_update_hud()
+
+func _input(event: InputEvent) -> void:
+	if relic_phase != 1 or not is_instance_valid(relic) or not player.is_alive:
+		return
+	if event is InputEventKey and event.pressed and not event.echo and event.keycode == KEY_O:
+		if player.global_position.distance_to(relic.global_position) < 2.2:
+			_collect_relic()
+			get_viewport().set_input_as_handled()
 
 func _start_encounter() -> void:
 	active = true
@@ -85,13 +119,18 @@ func _start_encounter() -> void:
 		marker.queue_free()
 		marker = null
 	for index in alive:
-		var enemy := ENEMY.instantiate() as CharacterBody3D
+		# One ranged caster supports each group; the final encounter retains its boss.
+		var is_mage := stage < STAGES.size() - 1 and index == alive - 1
+		var enemy := (MAGE if is_mage else ENEMY).instantiate() as CharacterBody3D
 		enemy.name = "Encounter%d_Shadow%d" % [stage + 1, index + 1]
 		enemy.position = STAGES[stage].spawns[index]
 		enemy.process_mode = Node.PROCESS_MODE_PAUSABLE
 		enemy.max_health = [80.0, 100.0, 110.0, 150.0, 450.0][stage]
 		enemy.attack_damage = [12.0, 14.0, 15.0, 18.0, 23.0][stage]
 		enemy.attack_timer = 0.5 + float(index) * 0.45
+		if is_mage:
+			enemy.max_health *= 0.85
+			enemy.attack_cooldown = 2.8
 		if stage == STAGES.size() - 1:
 			enemy.is_boss = true
 			enemy.attack_cooldown = 1.9
@@ -131,11 +170,11 @@ func _enemy_defeated(identity: int) -> void:
 		tween.tween_property(gate.get_node("Veil"), "transparency", 1.0, 0.65)
 		tween.tween_callback(gate.queue_free)
 	if stage == STAGES.size() - 1:
-		completed = true
 		boss_bar.hide()
 		boss_title.hide()
-		objective.text = "BLOCK D CLEARED\nThe Ash Warden has fallen."
-		get_parent().show_victory()
+		relic_phase = 1
+		_place_relic()
+		_update_hud()
 		return
 	stage += 1
 	# Small between-encounter recovery, rather than resetting combat mid-fight.
@@ -162,9 +201,32 @@ func _build_hud() -> void:
 	objective.add_theme_constant_override("shadow_offset_x", 2)
 	objective.add_theme_constant_override("shadow_offset_y", 2)
 	canvas.add_child(objective)
+	pickup_prompt = Label.new()
+	pickup_prompt.set_anchors_and_offsets_preset(Control.PRESET_CENTER_BOTTOM)
+	pickup_prompt.position = Vector2(-170, -140)
+	pickup_prompt.size = Vector2(340, 34)
+	pickup_prompt.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	pickup_prompt.text = "Press O to collect relic"
+	pickup_prompt.add_theme_font_size_override("font_size", 23)
+	pickup_prompt.add_theme_color_override("font_color", Color(0.7, 0.9, 1.0))
+	canvas.add_child(pickup_prompt)
+	pickup_prompt.hide()
+	message_label = Label.new()
+	message_label.set_anchors_and_offsets_preset(Control.PRESET_CENTER_TOP)
+	message_label.position = Vector2(-320, 100)
+	message_label.size = Vector2(640, 80)
+	message_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	message_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	message_label.add_theme_font_size_override("font_size", 26)
+	message_label.add_theme_color_override("font_color", Color(1.0, 0.7, 0.36))
+	message_label.add_theme_color_override("font_shadow_color", Color.BLACK)
+	message_label.add_theme_constant_override("shadow_offset_x", 2)
+	message_label.add_theme_constant_override("shadow_offset_y", 2)
+	canvas.add_child(message_label)
+	message_label.hide()
 	boss_bar = ProgressBar.new()
 	boss_bar.set_anchors_and_offsets_preset(Control.PRESET_CENTER_BOTTOM)
-	boss_bar.position = Vector2(-260, -52)
+	boss_bar.position = Vector2(-260, -150)
 	boss_bar.size = Vector2(520, 16)
 	boss_bar.show_percentage = false
 	var fill := StyleBoxFlat.new()
@@ -173,7 +235,7 @@ func _build_hud() -> void:
 	canvas.add_child(boss_bar)
 	boss_title = Label.new()
 	boss_title.set_anchors_and_offsets_preset(Control.PRESET_CENTER_BOTTOM)
-	boss_title.position = Vector2(-260, -84)
+	boss_title.position = Vector2(-260, -182)
 	boss_title.size.x = 520
 	boss_title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	boss_title.add_theme_font_size_override("font_size", 23)
@@ -182,18 +244,105 @@ func _build_hud() -> void:
 	boss_title.hide()
 
 func _update_hud() -> void:
-	if completed:
+	if relic_phase == 3:
+		objective.text = "MUTANT DEFEATED\n1/5 relics collected."
 		return
-	var data: Dictionary = STAGES[stage]
-	var distance := player.global_position.distance_to(data.trigger)
-	objective.text = "%d / %d  %s\n%s\n%s" % [stage + 1, STAGES.size(), data.name, data.hint, ("Shadows remaining: %d" % alive) if active else ("Follow the amber beacon — %dm" % int(distance))]
-	if is_instance_valid(boss) and not boss.is_dead:
+	if relic_phase == 1:
+		objective.text = "FIND ROOM C-101\nBlock C, first floor. Take the central stairs between D and C."
+	elif relic_phase == 2:
+		objective.text = "1/5 RELICS COLLECTED\nDefeat the Mutant in the hallway. Parry punches; Shadow Dash (Q) through its jump attack."
+	else:
+		var data: Dictionary = STAGES[stage]
+		var distance := player.global_position.distance_to(data.trigger)
+		var hint: String = data.hint
+		if active and not get_tree().get_nodes_in_group("mage").is_empty():
+			hint = "Parry violet orbs into fireballs. Face the group to return an explosive blast."
+		objective.text = "%d / %d  %s\n%s\n%s" % [stage + 1, STAGES.size(), data.name, hint, ("Shadows remaining: %d" % alive) if active else ("Follow the amber beacon — %dm" % int(distance))]
+	var shown_boss: CharacterBody3D = mutant if relic_phase >= 2 else boss
+	if is_instance_valid(shown_boss) and not shown_boss.is_dead and (relic_phase < 2 or bool(shown_boss.get("engaged"))):
 		boss_bar.show()
 		boss_title.show()
-		boss_bar.max_value = boss.max_health
-		boss_bar.value = boss.current_health
-		boss_title.text = "THE ASH WARDEN" + ("  —  UNBOUND" if boss.enraged else "")
-		boss.health_bar.hide()
+		boss_bar.max_value = shown_boss.max_health
+		boss_bar.value = shown_boss.current_health
+		boss_title.text = ("THE MUTANT" + ("  -  RENEWED" if bool(shown_boss.get("flexed")) else "")) if relic_phase >= 2 else ("THE ASH WARDEN" + ("  -  UNBOUND" if boss.enraged else ""))
+		shown_boss.health_bar.hide()
+	elif relic_phase >= 1:
+		boss_bar.hide()
+		boss_title.hide()
+
+func _place_relic() -> void:
+	var room := get_parent().get_node(RELIC_ROOM_PATH) as Node3D
+	relic = Node3D.new()
+	relic.name = "C101Relic"
+	room.add_child(relic)
+	relic.position = RELIC_LOCAL
+	var sphere := MeshInstance3D.new()
+	sphere.name = "GlowingRelic"
+	var mesh := SphereMesh.new()
+	mesh.radius = 0.32
+	mesh.height = 0.64
+	sphere.mesh = mesh
+	sphere.material_override = _emissive(Color(0.35, 0.8, 1.0), 4.0)
+	sphere.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	relic.add_child(sphere)
+	var halo := OmniLight3D.new()
+	halo.light_color = Color(0.3, 0.7, 1.0)
+	halo.light_energy = 2.0
+	halo.omni_range = 3.0
+	halo.shadow_enabled = false
+	relic.add_child(halo)
+	if marker:
+		marker.queue_free()
+	_set_marker(relic.global_position - Vector3.UP * 0.8, "ROOM C-101")
+
+func _collect_relic() -> void:
+	relic_phase = 2
+	relic_count = 1
+	relic.queue_free()
+	relic = null
+	pickup_prompt.hide()
+	if marker:
+		marker.queue_free()
+		marker = null
+	message_label.text = "1/5 relics collected"
+	message_label.show()
+	if is_instance_valid(player):
+		player.call("_add_camera_trauma", 0.28)
+	_place_mutant()
+	_update_hud()
+	await get_tree().create_timer(1.6).timeout
+	if not is_inside_tree() or relic_phase != 2:
+		return
+	message_label.text = "The stolen relic has alerted the Mutant"
+	if is_instance_valid(player):
+		player.call("_add_camera_trauma", 0.14)
+	await get_tree().create_timer(3.0).timeout
+	if is_inside_tree() and relic_phase == 2:
+		message_label.hide()
+
+func _place_mutant() -> void:
+	var room := get_parent().get_node(RELIC_ROOM_PATH) as Node3D
+	mutant = MUTANT.instantiate() as CharacterBody3D
+	mutant.name = "MutantBoss"
+	mutant.position = room.to_global(MUTANT_LOCAL)
+	mutant.max_health = 675.0 # 1.5 times the Ash Warden's 450 HP.
+	mutant.attack_damage = 25.0
+	mutant.move_speed = 2.5
+	mutant.attack_range = 1.9
+	mutant.process_mode = Node.PROCESS_MODE_PAUSABLE
+	mutant.died.connect(_mutant_defeated)
+	mutant.engaged_player.connect(_update_hud)
+	get_parent().add_child(mutant)
+	mutant.health_bar.hide()
+
+func _mutant_defeated() -> void:
+	relic_phase = 3
+	completed = true
+	boss_bar.hide()
+	boss_title.hide()
+	message_label.text = "THE MUTANT HAS FALLEN"
+	message_label.show()
+	_update_hud()
 
 func _emissive(color: Color, energy: float) -> StandardMaterial3D:
 	var material := StandardMaterial3D.new()
@@ -229,9 +378,9 @@ func _build_gate(index: int) -> void:
 	gate.add_child(veil)
 	gates.append(gate)
 
-func _set_marker() -> void:
+func _set_marker(marker_position: Vector3 = Vector3.ZERO, marker_text: String = "") -> void:
 	marker = Node3D.new()
-	marker.position = STAGES[stage].trigger + Vector3.UP * 0.12
+	marker.position = (STAGES[stage].trigger + Vector3.UP * 0.12) if marker_text.is_empty() else marker_position
 	add_child(marker)
 	var ring := MeshInstance3D.new()
 	var torus := TorusMesh.new()
@@ -241,7 +390,7 @@ func _set_marker() -> void:
 	ring.material_override = _emissive(Color(1.0, 0.40, 0.07), 3.0)
 	marker.add_child(ring)
 	var label := Label3D.new()
-	label.text = STAGES[stage].name
+	label.text = STAGES[stage].name if marker_text.is_empty() else marker_text
 	label.position.y = 1.7
 	label.billboard = BaseMaterial3D.BILLBOARD_ENABLED
 	label.font_size = 32

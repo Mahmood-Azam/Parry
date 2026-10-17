@@ -66022,16 +66022,6 @@ text = "C-001"
 font_size = 24
 outline_size = 0
 
-[node name="Open classroom door" type="MeshInstance3D" parent="White Campus Extensions C and D/Block C/Floor 0 central corridor and classrooms/Lecture room C-001" unique_id=332785488]
-transform = Transform3D(0.5816831, 0, -0.8134155, 0, 1, 0, 0.8134155, 0, 0.5816831, -2.05, 1.36, -8.3)
-material_override = SubResource("ShaderMaterial_fjae0")
-mesh = SubResource("ArrayMesh_s5l5n")
-
-[node name="Solid collision" type="StaticBody3D" parent="White Campus Extensions C and D/Block C/Floor 0 central corridor and classrooms/Lecture room C-001/Open classroom door" unique_id=324497110]
-
-[node name="@CollisionShape3D@91" type="CollisionShape3D" parent="White Campus Extensions C and D/Block C/Floor 0 central corridor and classrooms/Lecture room C-001/Open classroom door/Solid collision" unique_id=56449554]
-shape = SubResource("BoxShape3D_itsp2")
-
 [node name="Teaching whiteboard frame" type="MeshInstance3D" parent="White Campus Extensions C and D/Block C/Floor 0 central corridor and classrooms/Lecture room C-001" unique_id=2094217566]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -5.15, 1.99, -14.37)
 material_override = SubResource("ShaderMaterial_yujn1")
@@ -66675,16 +66665,6 @@ text = "C-003"
 font_size = 24
 outline_size = 0
 
-[node name="Open classroom door" type="MeshInstance3D" parent="White Campus Extensions C and D/Block C/Floor 0 central corridor and classrooms/Lecture room C-003" unique_id=1422311096]
-transform = Transform3D(0.5816831, 0, -0.8134155, 0, 1, 0, 0.8134155, 0, 0.5816831, -2.05, 1.36, -0.8)
-material_override = SubResource("ShaderMaterial_fjae0")
-mesh = SubResource("ArrayMesh_s5l5n")
-
-[node name="Solid collision" type="StaticBody3D" parent="White Campus Extensions C and D/Block C/Floor 0 central corridor and classrooms/Lecture room C-003/Open classroom door" unique_id=1407326215]
-
-[node name="@CollisionShape3D@197" type="CollisionShape3D" parent="White Campus Extensions C and D/Block C/Floor 0 central corridor and classrooms/Lecture room C-003/Open classroom door/Solid collision" unique_id=217049333]
-shape = SubResource("BoxShape3D_y0uho")
-
 [node name="Teaching whiteboard frame" type="MeshInstance3D" parent="White Campus Extensions C and D/Block C/Floor 0 central corridor and classrooms/Lecture room C-003" unique_id=1305644041]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -5.15, 1.99, -6.87)
 material_override = SubResource("ShaderMaterial_yujn1")
@@ -67327,16 +67307,6 @@ modulate = Color(0.75, 0.72, 0.56, 1)
 text = "C-005"
 font_size = 24
 outline_size = 0
-
-[node name="Open classroom door" type="MeshInstance3D" parent="White Campus Extensions C and D/Block C/Floor 0 central corridor and classrooms/Lecture room C-005" unique_id=1203397426]
-transform = Transform3D(0.5816831, 0, -0.8134155, 0, 1, 0, 0.8134155, 0, 0.5816831, -2.05, 1.36, 6.7)
-material_override = SubResource("ShaderMaterial_fjae0")
-mesh = SubResource("ArrayMesh_s5l5n")
-
-[node name="Solid collision" type="StaticBody3D" parent="White Campus Extensions C and D/Block C/Floor 0 central corridor and classrooms/Lecture room C-005/Open classroom door" unique_id=407625374]
-
-[node name="@CollisionShape3D@303" type="CollisionShape3D" parent="White Campus Extensions C and D/Block C/Floor 0 central corridor and classrooms/Lecture room C-005/Open classroom door/Solid collision" unique_id=1304741193]
-shape = SubResource("BoxShape3D_edl11")
 
 [node name="Teaching whiteboard frame" type="MeshInstance3D" parent="White Campus Extensions C and D/Block C/Floor 0 central corridor and classrooms/Lecture room C-005" unique_id=1583853149]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -5.15, 1.99, 0.63)
@@ -68424,16 +68394,6 @@ text = "C-002"
 font_size = 24
 outline_size = 0
 
-[node name="Open classroom door" type="MeshInstance3D" parent="White Campus Extensions C and D/Block C/Floor 0 central corridor and classrooms/Lecture room C-002" unique_id=2127450824]
-transform = Transform3D(0.5816831, 0, 0.8134155, 0, 1, 0, -0.8134155, 0, 0.5816831, 2.05, 1.36, -8.3)
-material_override = SubResource("ShaderMaterial_fjae0")
-mesh = SubResource("ArrayMesh_s5l5n")
-
-[node name="Solid collision" type="StaticBody3D" parent="White Campus Extensions C and D/Block C/Floor 0 central corridor and classrooms/Lecture room C-002/Open classroom door" unique_id=1597403877]
-
-[node name="@CollisionShape3D@497" type="CollisionShape3D" parent="White Campus Extensions C and D/Block C/Floor 0 central corridor and classrooms/Lecture room C-002/Open classroom door/Solid collision" unique_id=513881136]
-shape = SubResource("BoxShape3D_05t5u")
-
 [node name="Teaching whiteboard frame" type="MeshInstance3D" parent="White Campus Extensions C and D/Block C/Floor 0 central corridor and classrooms/Lecture room C-002" unique_id=1352478460]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 5.15, 1.99, -14.37)
 material_override = SubResource("ShaderMaterial_yujn1")
@@ -69137,16 +69097,6 @@ text = "C-004"
 font_size = 24
 outline_size = 0
 
-[node name="Open classroom door" type="MeshInstance3D" parent="White Campus Extensions C and D/Block C/Floor 0 central corridor and classrooms/Lecture room C-004" unique_id=1933839663]
-transform = Transform3D(0.5816831, 0, 0.8134155, 0, 1, 0, -0.8134155, 0, 0.5816831, 2.05, 1.36, -0.8)
-material_override = SubResource("ShaderMaterial_fjae0")
-mesh = SubResource("ArrayMesh_s5l5n")
-
-[node name="Solid collision" type="StaticBody3D" parent="White Campus Extensions C and D/Block C/Floor 0 central corridor and classrooms/Lecture room C-004/Open classroom door" unique_id=1250250273]
-
-[node name="@CollisionShape3D@612" type="CollisionShape3D" parent="White Campus Extensions C and D/Block C/Floor 0 central corridor and classrooms/Lecture room C-004/Open classroom door/Solid collision" unique_id=1014073999]
-shape = SubResource("BoxShape3D_6wmqc")
-
 [node name="Teaching whiteboard frame" type="MeshInstance3D" parent="White Campus Extensions C and D/Block C/Floor 0 central corridor and classrooms/Lecture room C-004" unique_id=2031537601]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 5.15, 1.99, -6.87)
 material_override = SubResource("ShaderMaterial_yujn1")
@@ -69789,16 +69739,6 @@ modulate = Color(0.75, 0.72, 0.56, 1)
 text = "C-006"
 font_size = 24
 outline_size = 0
-
-[node name="Open classroom door" type="MeshInstance3D" parent="White Campus Extensions C and D/Block C/Floor 0 central corridor and classrooms/Lecture room C-006" unique_id=1003076699]
-transform = Transform3D(0.5816831, 0, 0.8134155, 0, 1, 0, -0.8134155, 0, 0.5816831, 2.05, 1.36, 6.7)
-material_override = SubResource("ShaderMaterial_fjae0")
-mesh = SubResource("ArrayMesh_s5l5n")
-
-[node name="Solid collision" type="StaticBody3D" parent="White Campus Extensions C and D/Block C/Floor 0 central corridor and classrooms/Lecture room C-006/Open classroom door" unique_id=729395476]
-
-[node name="@CollisionShape3D@718" type="CollisionShape3D" parent="White Campus Extensions C and D/Block C/Floor 0 central corridor and classrooms/Lecture room C-006/Open classroom door/Solid collision" unique_id=1129264447]
-shape = SubResource("BoxShape3D_txtmo")
 
 [node name="Teaching whiteboard frame" type="MeshInstance3D" parent="White Campus Extensions C and D/Block C/Floor 0 central corridor and classrooms/Lecture room C-006" unique_id=1368816018]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 5.15, 1.99, 0.63)
@@ -71706,16 +71646,6 @@ text = "C-101"
 font_size = 24
 outline_size = 0
 
-[node name="Open classroom door" type="MeshInstance3D" parent="White Campus Extensions C and D/Block C/Floor 1 central corridor and classrooms/Lecture room C-101" unique_id=1979611541]
-transform = Transform3D(0.5816831, 0, -0.8134155, 0, 1, 0, 0.8134155, 0, 0.5816831, -2.05, 4.51, -8.3)
-material_override = SubResource("ShaderMaterial_fjae0")
-mesh = SubResource("ArrayMesh_s5l5n")
-
-[node name="Solid collision" type="StaticBody3D" parent="White Campus Extensions C and D/Block C/Floor 1 central corridor and classrooms/Lecture room C-101/Open classroom door" unique_id=1332355252]
-
-[node name="@CollisionShape3D@1044" type="CollisionShape3D" parent="White Campus Extensions C and D/Block C/Floor 1 central corridor and classrooms/Lecture room C-101/Open classroom door/Solid collision" unique_id=921908020]
-shape = SubResource("BoxShape3D_5hdye")
-
 [node name="Teaching whiteboard frame" type="MeshInstance3D" parent="White Campus Extensions C and D/Block C/Floor 1 central corridor and classrooms/Lecture room C-101" unique_id=916434233]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -5.15, 5.14, -14.37)
 material_override = SubResource("ShaderMaterial_yujn1")
@@ -72359,16 +72289,6 @@ text = "C-103"
 font_size = 24
 outline_size = 0
 
-[node name="Open classroom door" type="MeshInstance3D" parent="White Campus Extensions C and D/Block C/Floor 1 central corridor and classrooms/Lecture room C-103" unique_id=1256049835]
-transform = Transform3D(0.5816831, 0, -0.8134155, 0, 1, 0, 0.8134155, 0, 0.5816831, -2.05, 4.51, -0.8)
-material_override = SubResource("ShaderMaterial_fjae0")
-mesh = SubResource("ArrayMesh_s5l5n")
-
-[node name="Solid collision" type="StaticBody3D" parent="White Campus Extensions C and D/Block C/Floor 1 central corridor and classrooms/Lecture room C-103/Open classroom door" unique_id=1015903000]
-
-[node name="@CollisionShape3D@1150" type="CollisionShape3D" parent="White Campus Extensions C and D/Block C/Floor 1 central corridor and classrooms/Lecture room C-103/Open classroom door/Solid collision" unique_id=1349492939]
-shape = SubResource("BoxShape3D_f1hxe")
-
 [node name="Teaching whiteboard frame" type="MeshInstance3D" parent="White Campus Extensions C and D/Block C/Floor 1 central corridor and classrooms/Lecture room C-103" unique_id=1386070324]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -5.15, 5.14, -6.87)
 material_override = SubResource("ShaderMaterial_yujn1")
@@ -73011,16 +72931,6 @@ modulate = Color(0.75, 0.72, 0.56, 1)
 text = "C-105"
 font_size = 24
 outline_size = 0
-
-[node name="Open classroom door" type="MeshInstance3D" parent="White Campus Extensions C and D/Block C/Floor 1 central corridor and classrooms/Lecture room C-105" unique_id=1338137024]
-transform = Transform3D(0.5816831, 0, -0.8134155, 0, 1, 0, 0.8134155, 0, 0.5816831, -2.05, 4.51, 6.7)
-material_override = SubResource("ShaderMaterial_fjae0")
-mesh = SubResource("ArrayMesh_s5l5n")
-
-[node name="Solid collision" type="StaticBody3D" parent="White Campus Extensions C and D/Block C/Floor 1 central corridor and classrooms/Lecture room C-105/Open classroom door" unique_id=1535381932]
-
-[node name="@CollisionShape3D@1256" type="CollisionShape3D" parent="White Campus Extensions C and D/Block C/Floor 1 central corridor and classrooms/Lecture room C-105/Open classroom door/Solid collision" unique_id=125547919]
-shape = SubResource("BoxShape3D_eoi81")
 
 [node name="Teaching whiteboard frame" type="MeshInstance3D" parent="White Campus Extensions C and D/Block C/Floor 1 central corridor and classrooms/Lecture room C-105" unique_id=441362876]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -5.15, 5.14, 0.63)
@@ -74110,16 +74020,6 @@ text = "C-102"
 font_size = 24
 outline_size = 0
 
-[node name="Open classroom door" type="MeshInstance3D" parent="White Campus Extensions C and D/Block C/Floor 1 central corridor and classrooms/Lecture room C-102" unique_id=1302816799]
-transform = Transform3D(0.5816831, 0, 0.8134155, 0, 1, 0, -0.8134155, 0, 0.5816831, 2.05, 4.51, -8.3)
-material_override = SubResource("ShaderMaterial_fjae0")
-mesh = SubResource("ArrayMesh_s5l5n")
-
-[node name="Solid collision" type="StaticBody3D" parent="White Campus Extensions C and D/Block C/Floor 1 central corridor and classrooms/Lecture room C-102/Open classroom door" unique_id=381353059]
-
-[node name="@CollisionShape3D@1451" type="CollisionShape3D" parent="White Campus Extensions C and D/Block C/Floor 1 central corridor and classrooms/Lecture room C-102/Open classroom door/Solid collision" unique_id=447982320]
-shape = SubResource("BoxShape3D_wp0ud")
-
 [node name="Teaching whiteboard frame" type="MeshInstance3D" parent="White Campus Extensions C and D/Block C/Floor 1 central corridor and classrooms/Lecture room C-102" unique_id=1274534313]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 5.15, 5.14, -14.37)
 material_override = SubResource("ShaderMaterial_yujn1")
@@ -74823,16 +74723,6 @@ text = "C-104"
 font_size = 24
 outline_size = 0
 
-[node name="Open classroom door" type="MeshInstance3D" parent="White Campus Extensions C and D/Block C/Floor 1 central corridor and classrooms/Lecture room C-104" unique_id=98116416]
-transform = Transform3D(0.5816831, 0, 0.8134155, 0, 1, 0, -0.8134155, 0, 0.5816831, 2.05, 4.51, -0.8)
-material_override = SubResource("ShaderMaterial_fjae0")
-mesh = SubResource("ArrayMesh_s5l5n")
-
-[node name="Solid collision" type="StaticBody3D" parent="White Campus Extensions C and D/Block C/Floor 1 central corridor and classrooms/Lecture room C-104/Open classroom door" unique_id=1708439510]
-
-[node name="@CollisionShape3D@1566" type="CollisionShape3D" parent="White Campus Extensions C and D/Block C/Floor 1 central corridor and classrooms/Lecture room C-104/Open classroom door/Solid collision" unique_id=1749551662]
-shape = SubResource("BoxShape3D_hk7po")
-
 [node name="Teaching whiteboard frame" type="MeshInstance3D" parent="White Campus Extensions C and D/Block C/Floor 1 central corridor and classrooms/Lecture room C-104" unique_id=1376244980]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 5.15, 5.14, -6.87)
 material_override = SubResource("ShaderMaterial_yujn1")
@@ -75475,16 +75365,6 @@ modulate = Color(0.75, 0.72, 0.56, 1)
 text = "C-106"
 font_size = 24
 outline_size = 0
-
-[node name="Open classroom door" type="MeshInstance3D" parent="White Campus Extensions C and D/Block C/Floor 1 central corridor and classrooms/Lecture room C-106" unique_id=357670710]
-transform = Transform3D(0.5816831, 0, 0.8134155, 0, 1, 0, -0.8134155, 0, 0.5816831, 2.05, 4.51, 6.7)
-material_override = SubResource("ShaderMaterial_fjae0")
-mesh = SubResource("ArrayMesh_s5l5n")
-
-[node name="Solid collision" type="StaticBody3D" parent="White Campus Extensions C and D/Block C/Floor 1 central corridor and classrooms/Lecture room C-106/Open classroom door" unique_id=1282531441]
-
-[node name="@CollisionShape3D@1672" type="CollisionShape3D" parent="White Campus Extensions C and D/Block C/Floor 1 central corridor and classrooms/Lecture room C-106/Open classroom door/Solid collision" unique_id=1048564072]
-shape = SubResource("BoxShape3D_pslxb")
 
 [node name="Teaching whiteboard frame" type="MeshInstance3D" parent="White Campus Extensions C and D/Block C/Floor 1 central corridor and classrooms/Lecture room C-106" unique_id=765325595]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 5.15, 5.14, 0.63)
@@ -77137,16 +77017,6 @@ text = "C-201"
 font_size = 24
 outline_size = 0
 
-[node name="Open classroom door" type="MeshInstance3D" parent="White Campus Extensions C and D/Block C/Floor 2 central corridor and classrooms/Lecture room C-201" unique_id=1940836518]
-transform = Transform3D(0.5816831, 0, -0.8134155, 0, 1, 0, 0.8134155, 0, 0.5816831, -2.05, 7.66, -8.3)
-material_override = SubResource("ShaderMaterial_fjae0")
-mesh = SubResource("ArrayMesh_s5l5n")
-
-[node name="Solid collision" type="StaticBody3D" parent="White Campus Extensions C and D/Block C/Floor 2 central corridor and classrooms/Lecture room C-201/Open classroom door" unique_id=1190955978]
-
-[node name="@CollisionShape3D@1949" type="CollisionShape3D" parent="White Campus Extensions C and D/Block C/Floor 2 central corridor and classrooms/Lecture room C-201/Open classroom door/Solid collision" unique_id=1400329094]
-shape = SubResource("BoxShape3D_xc4it")
-
 [node name="Teaching whiteboard frame" type="MeshInstance3D" parent="White Campus Extensions C and D/Block C/Floor 2 central corridor and classrooms/Lecture room C-201" unique_id=576491676]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -5.15, 8.29, -14.37)
 material_override = SubResource("ShaderMaterial_yujn1")
@@ -77790,16 +77660,6 @@ text = "C-203"
 font_size = 24
 outline_size = 0
 
-[node name="Open classroom door" type="MeshInstance3D" parent="White Campus Extensions C and D/Block C/Floor 2 central corridor and classrooms/Lecture room C-203" unique_id=352438714]
-transform = Transform3D(0.5816831, 0, -0.8134155, 0, 1, 0, 0.8134155, 0, 0.5816831, -2.05, 7.66, -0.8)
-material_override = SubResource("ShaderMaterial_fjae0")
-mesh = SubResource("ArrayMesh_s5l5n")
-
-[node name="Solid collision" type="StaticBody3D" parent="White Campus Extensions C and D/Block C/Floor 2 central corridor and classrooms/Lecture room C-203/Open classroom door" unique_id=2012219752]
-
-[node name="@CollisionShape3D@2055" type="CollisionShape3D" parent="White Campus Extensions C and D/Block C/Floor 2 central corridor and classrooms/Lecture room C-203/Open classroom door/Solid collision" unique_id=1658603350]
-shape = SubResource("BoxShape3D_1ukv8")
-
 [node name="Teaching whiteboard frame" type="MeshInstance3D" parent="White Campus Extensions C and D/Block C/Floor 2 central corridor and classrooms/Lecture room C-203" unique_id=1785258921]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -5.15, 8.29, -6.87)
 material_override = SubResource("ShaderMaterial_yujn1")
@@ -78442,16 +78302,6 @@ modulate = Color(0.75, 0.72, 0.56, 1)
 text = "C-205"
 font_size = 24
 outline_size = 0
-
-[node name="Open classroom door" type="MeshInstance3D" parent="White Campus Extensions C and D/Block C/Floor 2 central corridor and classrooms/Lecture room C-205" unique_id=1957039157]
-transform = Transform3D(0.5816831, 0, -0.8134155, 0, 1, 0, 0.8134155, 0, 0.5816831, -2.05, 7.66, 6.7)
-material_override = SubResource("ShaderMaterial_fjae0")
-mesh = SubResource("ArrayMesh_s5l5n")
-
-[node name="Solid collision" type="StaticBody3D" parent="White Campus Extensions C and D/Block C/Floor 2 central corridor and classrooms/Lecture room C-205/Open classroom door" unique_id=1507689970]
-
-[node name="@CollisionShape3D@2161" type="CollisionShape3D" parent="White Campus Extensions C and D/Block C/Floor 2 central corridor and classrooms/Lecture room C-205/Open classroom door/Solid collision" unique_id=1953491048]
-shape = SubResource("BoxShape3D_1ss5t")
 
 [node name="Teaching whiteboard frame" type="MeshInstance3D" parent="White Campus Extensions C and D/Block C/Floor 2 central corridor and classrooms/Lecture room C-205" unique_id=1061639614]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -5.15, 8.29, 0.63)
@@ -79541,16 +79391,6 @@ text = "C-202"
 font_size = 24
 outline_size = 0
 
-[node name="Open classroom door" type="MeshInstance3D" parent="White Campus Extensions C and D/Block C/Floor 2 central corridor and classrooms/Lecture room C-202" unique_id=1753232284]
-transform = Transform3D(0.5816831, 0, 0.8134155, 0, 1, 0, -0.8134155, 0, 0.5816831, 2.05, 7.66, -8.3)
-material_override = SubResource("ShaderMaterial_fjae0")
-mesh = SubResource("ArrayMesh_s5l5n")
-
-[node name="Solid collision" type="StaticBody3D" parent="White Campus Extensions C and D/Block C/Floor 2 central corridor and classrooms/Lecture room C-202/Open classroom door" unique_id=1197612729]
-
-[node name="@CollisionShape3D@2356" type="CollisionShape3D" parent="White Campus Extensions C and D/Block C/Floor 2 central corridor and classrooms/Lecture room C-202/Open classroom door/Solid collision" unique_id=1656387966]
-shape = SubResource("BoxShape3D_x0wam")
-
 [node name="Teaching whiteboard frame" type="MeshInstance3D" parent="White Campus Extensions C and D/Block C/Floor 2 central corridor and classrooms/Lecture room C-202" unique_id=1133865156]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 5.15, 8.29, -14.37)
 material_override = SubResource("ShaderMaterial_yujn1")
@@ -80194,16 +80034,6 @@ text = "C-204"
 font_size = 24
 outline_size = 0
 
-[node name="Open classroom door" type="MeshInstance3D" parent="White Campus Extensions C and D/Block C/Floor 2 central corridor and classrooms/Lecture room C-204" unique_id=1846319886]
-transform = Transform3D(0.5816831, 0, 0.8134155, 0, 1, 0, -0.8134155, 0, 0.5816831, 2.05, 7.66, -0.8)
-material_override = SubResource("ShaderMaterial_fjae0")
-mesh = SubResource("ArrayMesh_s5l5n")
-
-[node name="Solid collision" type="StaticBody3D" parent="White Campus Extensions C and D/Block C/Floor 2 central corridor and classrooms/Lecture room C-204/Open classroom door" unique_id=562267471]
-
-[node name="@CollisionShape3D@2462" type="CollisionShape3D" parent="White Campus Extensions C and D/Block C/Floor 2 central corridor and classrooms/Lecture room C-204/Open classroom door/Solid collision" unique_id=2121723592]
-shape = SubResource("BoxShape3D_oxc2q")
-
 [node name="Teaching whiteboard frame" type="MeshInstance3D" parent="White Campus Extensions C and D/Block C/Floor 2 central corridor and classrooms/Lecture room C-204" unique_id=2062071882]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 5.15, 8.29, -6.87)
 material_override = SubResource("ShaderMaterial_yujn1")
@@ -80846,16 +80676,6 @@ modulate = Color(0.75, 0.72, 0.56, 1)
 text = "C-206"
 font_size = 24
 outline_size = 0
-
-[node name="Open classroom door" type="MeshInstance3D" parent="White Campus Extensions C and D/Block C/Floor 2 central corridor and classrooms/Lecture room C-206" unique_id=1567576954]
-transform = Transform3D(0.5816831, 0, 0.8134155, 0, 1, 0, -0.8134155, 0, 0.5816831, 2.05, 7.66, 6.7)
-material_override = SubResource("ShaderMaterial_fjae0")
-mesh = SubResource("ArrayMesh_s5l5n")
-
-[node name="Solid collision" type="StaticBody3D" parent="White Campus Extensions C and D/Block C/Floor 2 central corridor and classrooms/Lecture room C-206/Open classroom door" unique_id=211287831]
-
-[node name="@CollisionShape3D@2568" type="CollisionShape3D" parent="White Campus Extensions C and D/Block C/Floor 2 central corridor and classrooms/Lecture room C-206/Open classroom door/Solid collision" unique_id=1708615694]
-shape = SubResource("BoxShape3D_56hdv")
 
 [node name="Teaching whiteboard frame" type="MeshInstance3D" parent="White Campus Extensions C and D/Block C/Floor 2 central corridor and classrooms/Lecture room C-206" unique_id=68803030]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 5.15, 8.29, 0.63)
@@ -82514,16 +82334,6 @@ text = "C-301"
 font_size = 24
 outline_size = 0
 
-[node name="Open classroom door" type="MeshInstance3D" parent="White Campus Extensions C and D/Block C/Floor 3 central corridor and classrooms/Lecture room C-301" unique_id=1379640591]
-transform = Transform3D(0.5816831, 0, -0.8134155, 0, 1, 0, 0.8134155, 0, 0.5816831, -2.05, 10.81, -8.3)
-material_override = SubResource("ShaderMaterial_fjae0")
-mesh = SubResource("ArrayMesh_s5l5n")
-
-[node name="Solid collision" type="StaticBody3D" parent="White Campus Extensions C and D/Block C/Floor 3 central corridor and classrooms/Lecture room C-301/Open classroom door" unique_id=1749198496]
-
-[node name="@CollisionShape3D@2846" type="CollisionShape3D" parent="White Campus Extensions C and D/Block C/Floor 3 central corridor and classrooms/Lecture room C-301/Open classroom door/Solid collision" unique_id=1272724848]
-shape = SubResource("BoxShape3D_cldon")
-
 [node name="Teaching whiteboard frame" type="MeshInstance3D" parent="White Campus Extensions C and D/Block C/Floor 3 central corridor and classrooms/Lecture room C-301" unique_id=1497397152]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -5.15, 11.44, -14.37)
 material_override = SubResource("ShaderMaterial_yujn1")
@@ -83167,16 +82977,6 @@ text = "C-303"
 font_size = 24
 outline_size = 0
 
-[node name="Open classroom door" type="MeshInstance3D" parent="White Campus Extensions C and D/Block C/Floor 3 central corridor and classrooms/Lecture room C-303" unique_id=1338568066]
-transform = Transform3D(0.5816831, 0, -0.8134155, 0, 1, 0, 0.8134155, 0, 0.5816831, -2.05, 10.81, -0.8)
-material_override = SubResource("ShaderMaterial_fjae0")
-mesh = SubResource("ArrayMesh_s5l5n")
-
-[node name="Solid collision" type="StaticBody3D" parent="White Campus Extensions C and D/Block C/Floor 3 central corridor and classrooms/Lecture room C-303/Open classroom door" unique_id=292799809]
-
-[node name="@CollisionShape3D@2952" type="CollisionShape3D" parent="White Campus Extensions C and D/Block C/Floor 3 central corridor and classrooms/Lecture room C-303/Open classroom door/Solid collision" unique_id=471187817]
-shape = SubResource("BoxShape3D_3oqm7")
-
 [node name="Teaching whiteboard frame" type="MeshInstance3D" parent="White Campus Extensions C and D/Block C/Floor 3 central corridor and classrooms/Lecture room C-303" unique_id=219177477]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -5.15, 11.44, -6.87)
 material_override = SubResource("ShaderMaterial_yujn1")
@@ -83819,16 +83619,6 @@ modulate = Color(0.75, 0.72, 0.56, 1)
 text = "C-305"
 font_size = 24
 outline_size = 0
-
-[node name="Open classroom door" type="MeshInstance3D" parent="White Campus Extensions C and D/Block C/Floor 3 central corridor and classrooms/Lecture room C-305" unique_id=1598245938]
-transform = Transform3D(0.5816831, 0, -0.8134155, 0, 1, 0, 0.8134155, 0, 0.5816831, -2.05, 10.81, 6.7)
-material_override = SubResource("ShaderMaterial_fjae0")
-mesh = SubResource("ArrayMesh_s5l5n")
-
-[node name="Solid collision" type="StaticBody3D" parent="White Campus Extensions C and D/Block C/Floor 3 central corridor and classrooms/Lecture room C-305/Open classroom door" unique_id=625083627]
-
-[node name="@CollisionShape3D@3058" type="CollisionShape3D" parent="White Campus Extensions C and D/Block C/Floor 3 central corridor and classrooms/Lecture room C-305/Open classroom door/Solid collision" unique_id=2130964092]
-shape = SubResource("BoxShape3D_x7px7")
 
 [node name="Teaching whiteboard frame" type="MeshInstance3D" parent="White Campus Extensions C and D/Block C/Floor 3 central corridor and classrooms/Lecture room C-305" unique_id=1858306097]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -5.15, 11.44, 0.63)
@@ -84918,16 +84708,6 @@ text = "C-302"
 font_size = 24
 outline_size = 0
 
-[node name="Open classroom door" type="MeshInstance3D" parent="White Campus Extensions C and D/Block C/Floor 3 central corridor and classrooms/Lecture room C-302" unique_id=130789110]
-transform = Transform3D(0.5816831, 0, 0.8134155, 0, 1, 0, -0.8134155, 0, 0.5816831, 2.05, 10.81, -8.3)
-material_override = SubResource("ShaderMaterial_fjae0")
-mesh = SubResource("ArrayMesh_s5l5n")
-
-[node name="Solid collision" type="StaticBody3D" parent="White Campus Extensions C and D/Block C/Floor 3 central corridor and classrooms/Lecture room C-302/Open classroom door" unique_id=1634502327]
-
-[node name="@CollisionShape3D@3253" type="CollisionShape3D" parent="White Campus Extensions C and D/Block C/Floor 3 central corridor and classrooms/Lecture room C-302/Open classroom door/Solid collision" unique_id=393369157]
-shape = SubResource("BoxShape3D_1g15h")
-
 [node name="Teaching whiteboard frame" type="MeshInstance3D" parent="White Campus Extensions C and D/Block C/Floor 3 central corridor and classrooms/Lecture room C-302" unique_id=1361384876]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 5.15, 11.44, -14.37)
 material_override = SubResource("ShaderMaterial_yujn1")
@@ -85571,16 +85351,6 @@ text = "C-304"
 font_size = 24
 outline_size = 0
 
-[node name="Open classroom door" type="MeshInstance3D" parent="White Campus Extensions C and D/Block C/Floor 3 central corridor and classrooms/Lecture room C-304" unique_id=648090755]
-transform = Transform3D(0.5816831, 0, 0.8134155, 0, 1, 0, -0.8134155, 0, 0.5816831, 2.05, 10.81, -0.8)
-material_override = SubResource("ShaderMaterial_fjae0")
-mesh = SubResource("ArrayMesh_s5l5n")
-
-[node name="Solid collision" type="StaticBody3D" parent="White Campus Extensions C and D/Block C/Floor 3 central corridor and classrooms/Lecture room C-304/Open classroom door" unique_id=1509329784]
-
-[node name="@CollisionShape3D@3359" type="CollisionShape3D" parent="White Campus Extensions C and D/Block C/Floor 3 central corridor and classrooms/Lecture room C-304/Open classroom door/Solid collision" unique_id=595966388]
-shape = SubResource("BoxShape3D_cfj7d")
-
 [node name="Teaching whiteboard frame" type="MeshInstance3D" parent="White Campus Extensions C and D/Block C/Floor 3 central corridor and classrooms/Lecture room C-304" unique_id=1296293851]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 5.15, 11.44, -6.87)
 material_override = SubResource("ShaderMaterial_yujn1")
@@ -86223,16 +85993,6 @@ modulate = Color(0.75, 0.72, 0.56, 1)
 text = "C-306"
 font_size = 24
 outline_size = 0
-
-[node name="Open classroom door" type="MeshInstance3D" parent="White Campus Extensions C and D/Block C/Floor 3 central corridor and classrooms/Lecture room C-306" unique_id=1596845307]
-transform = Transform3D(0.5816831, 0, 0.8134155, 0, 1, 0, -0.8134155, 0, 0.5816831, 2.05, 10.81, 6.7)
-material_override = SubResource("ShaderMaterial_fjae0")
-mesh = SubResource("ArrayMesh_s5l5n")
-
-[node name="Solid collision" type="StaticBody3D" parent="White Campus Extensions C and D/Block C/Floor 3 central corridor and classrooms/Lecture room C-306/Open classroom door" unique_id=1488811686]
-
-[node name="@CollisionShape3D@3465" type="CollisionShape3D" parent="White Campus Extensions C and D/Block C/Floor 3 central corridor and classrooms/Lecture room C-306/Open classroom door/Solid collision" unique_id=466482970]
-shape = SubResource("BoxShape3D_tb8xu")
 
 [node name="Teaching whiteboard frame" type="MeshInstance3D" parent="White Campus Extensions C and D/Block C/Floor 3 central corridor and classrooms/Lecture room C-306" unique_id=369577160]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 5.15, 11.44, 0.63)
@@ -87881,16 +87641,6 @@ text = "C-401"
 font_size = 24
 outline_size = 0
 
-[node name="Open classroom door" type="MeshInstance3D" parent="White Campus Extensions C and D/Block C/Floor 4 central corridor and classrooms/Lecture room C-401" unique_id=1810350486]
-transform = Transform3D(0.5816831, 0, -0.8134155, 0, 1, 0, 0.8134155, 0, 0.5816831, -2.05, 13.96, -8.3)
-material_override = SubResource("ShaderMaterial_fjae0")
-mesh = SubResource("ArrayMesh_s5l5n")
-
-[node name="Solid collision" type="StaticBody3D" parent="White Campus Extensions C and D/Block C/Floor 4 central corridor and classrooms/Lecture room C-401/Open classroom door" unique_id=1580935404]
-
-[node name="@CollisionShape3D@3741" type="CollisionShape3D" parent="White Campus Extensions C and D/Block C/Floor 4 central corridor and classrooms/Lecture room C-401/Open classroom door/Solid collision" unique_id=722244897]
-shape = SubResource("BoxShape3D_e17an")
-
 [node name="Teaching whiteboard frame" type="MeshInstance3D" parent="White Campus Extensions C and D/Block C/Floor 4 central corridor and classrooms/Lecture room C-401" unique_id=2124461205]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -5.15, 14.59, -14.37)
 material_override = SubResource("ShaderMaterial_yujn1")
@@ -88534,16 +88284,6 @@ text = "C-403"
 font_size = 24
 outline_size = 0
 
-[node name="Open classroom door" type="MeshInstance3D" parent="White Campus Extensions C and D/Block C/Floor 4 central corridor and classrooms/Lecture room C-403" unique_id=1802940292]
-transform = Transform3D(0.5816831, 0, -0.8134155, 0, 1, 0, 0.8134155, 0, 0.5816831, -2.05, 13.96, -0.8)
-material_override = SubResource("ShaderMaterial_fjae0")
-mesh = SubResource("ArrayMesh_s5l5n")
-
-[node name="Solid collision" type="StaticBody3D" parent="White Campus Extensions C and D/Block C/Floor 4 central corridor and classrooms/Lecture room C-403/Open classroom door" unique_id=1790077573]
-
-[node name="@CollisionShape3D@3847" type="CollisionShape3D" parent="White Campus Extensions C and D/Block C/Floor 4 central corridor and classrooms/Lecture room C-403/Open classroom door/Solid collision" unique_id=166492895]
-shape = SubResource("BoxShape3D_htwwn")
-
 [node name="Teaching whiteboard frame" type="MeshInstance3D" parent="White Campus Extensions C and D/Block C/Floor 4 central corridor and classrooms/Lecture room C-403" unique_id=507997903]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -5.15, 14.59, -6.87)
 material_override = SubResource("ShaderMaterial_yujn1")
@@ -89186,16 +88926,6 @@ modulate = Color(0.75, 0.72, 0.56, 1)
 text = "C-405"
 font_size = 24
 outline_size = 0
-
-[node name="Open classroom door" type="MeshInstance3D" parent="White Campus Extensions C and D/Block C/Floor 4 central corridor and classrooms/Lecture room C-405" unique_id=1186556633]
-transform = Transform3D(0.5816831, 0, -0.8134155, 0, 1, 0, 0.8134155, 0, 0.5816831, -2.05, 13.96, 6.7)
-material_override = SubResource("ShaderMaterial_fjae0")
-mesh = SubResource("ArrayMesh_s5l5n")
-
-[node name="Solid collision" type="StaticBody3D" parent="White Campus Extensions C and D/Block C/Floor 4 central corridor and classrooms/Lecture room C-405/Open classroom door" unique_id=947174987]
-
-[node name="@CollisionShape3D@3953" type="CollisionShape3D" parent="White Campus Extensions C and D/Block C/Floor 4 central corridor and classrooms/Lecture room C-405/Open classroom door/Solid collision" unique_id=1510789212]
-shape = SubResource("BoxShape3D_oe5rv")
 
 [node name="Teaching whiteboard frame" type="MeshInstance3D" parent="White Campus Extensions C and D/Block C/Floor 4 central corridor and classrooms/Lecture room C-405" unique_id=448279120]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -5.15, 14.59, 0.63)
@@ -90285,16 +90015,6 @@ text = "C-402"
 font_size = 24
 outline_size = 0
 
-[node name="Open classroom door" type="MeshInstance3D" parent="White Campus Extensions C and D/Block C/Floor 4 central corridor and classrooms/Lecture room C-402" unique_id=812140838]
-transform = Transform3D(0.5816831, 0, 0.8134155, 0, 1, 0, -0.8134155, 0, 0.5816831, 2.05, 13.96, -8.3)
-material_override = SubResource("ShaderMaterial_fjae0")
-mesh = SubResource("ArrayMesh_s5l5n")
-
-[node name="Solid collision" type="StaticBody3D" parent="White Campus Extensions C and D/Block C/Floor 4 central corridor and classrooms/Lecture room C-402/Open classroom door" unique_id=181877069]
-
-[node name="@CollisionShape3D@4148" type="CollisionShape3D" parent="White Campus Extensions C and D/Block C/Floor 4 central corridor and classrooms/Lecture room C-402/Open classroom door/Solid collision" unique_id=897064216]
-shape = SubResource("BoxShape3D_hnubx")
-
 [node name="Teaching whiteboard frame" type="MeshInstance3D" parent="White Campus Extensions C and D/Block C/Floor 4 central corridor and classrooms/Lecture room C-402" unique_id=1343789789]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 5.15, 14.59, -14.37)
 material_override = SubResource("ShaderMaterial_yujn1")
@@ -90938,16 +90658,6 @@ text = "C-404"
 font_size = 24
 outline_size = 0
 
-[node name="Open classroom door" type="MeshInstance3D" parent="White Campus Extensions C and D/Block C/Floor 4 central corridor and classrooms/Lecture room C-404" unique_id=1830316869]
-transform = Transform3D(0.5816831, 0, 0.8134155, 0, 1, 0, -0.8134155, 0, 0.5816831, 2.05, 13.96, -0.8)
-material_override = SubResource("ShaderMaterial_fjae0")
-mesh = SubResource("ArrayMesh_s5l5n")
-
-[node name="Solid collision" type="StaticBody3D" parent="White Campus Extensions C and D/Block C/Floor 4 central corridor and classrooms/Lecture room C-404/Open classroom door" unique_id=2066758495]
-
-[node name="@CollisionShape3D@4254" type="CollisionShape3D" parent="White Campus Extensions C and D/Block C/Floor 4 central corridor and classrooms/Lecture room C-404/Open classroom door/Solid collision" unique_id=1411549913]
-shape = SubResource("BoxShape3D_nii4r")
-
 [node name="Teaching whiteboard frame" type="MeshInstance3D" parent="White Campus Extensions C and D/Block C/Floor 4 central corridor and classrooms/Lecture room C-404" unique_id=692300519]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 5.15, 14.59, -6.87)
 material_override = SubResource("ShaderMaterial_yujn1")
@@ -91590,16 +91300,6 @@ modulate = Color(0.75, 0.72, 0.56, 1)
 text = "C-406"
 font_size = 24
 outline_size = 0
-
-[node name="Open classroom door" type="MeshInstance3D" parent="White Campus Extensions C and D/Block C/Floor 4 central corridor and classrooms/Lecture room C-406" unique_id=1232416642]
-transform = Transform3D(0.5816831, 0, 0.8134155, 0, 1, 0, -0.8134155, 0, 0.5816831, 2.05, 13.96, 6.7)
-material_override = SubResource("ShaderMaterial_fjae0")
-mesh = SubResource("ArrayMesh_s5l5n")
-
-[node name="Solid collision" type="StaticBody3D" parent="White Campus Extensions C and D/Block C/Floor 4 central corridor and classrooms/Lecture room C-406/Open classroom door" unique_id=1260049074]
-
-[node name="@CollisionShape3D@4360" type="CollisionShape3D" parent="White Campus Extensions C and D/Block C/Floor 4 central corridor and classrooms/Lecture room C-406/Open classroom door/Solid collision" unique_id=1382900763]
-shape = SubResource("BoxShape3D_v4q1h")
 
 [node name="Teaching whiteboard frame" type="MeshInstance3D" parent="White Campus Extensions C and D/Block C/Floor 4 central corridor and classrooms/Lecture room C-406" unique_id=1543769526]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 5.15, 14.59, 0.63)
@@ -93411,16 +93111,6 @@ text = "D-001"
 font_size = 24
 outline_size = 0
 
-[node name="Open classroom door" type="MeshInstance3D" parent="White Campus Extensions C and D/Block D/Floor 0 central corridor and classrooms/Lecture room D-001" unique_id=238868360]
-transform = Transform3D(0.5816831, 0, -0.8134155, 0, 1, 0, 0.8134155, 0, 0.5816831, -2.05, 1.36, -8.3)
-material_override = SubResource("ShaderMaterial_fjae0")
-mesh = SubResource("ArrayMesh_s5l5n")
-
-[node name="Solid collision" type="StaticBody3D" parent="White Campus Extensions C and D/Block D/Floor 0 central corridor and classrooms/Lecture room D-001/Open classroom door" unique_id=2124042688]
-
-[node name="@CollisionShape3D@4620" type="CollisionShape3D" parent="White Campus Extensions C and D/Block D/Floor 0 central corridor and classrooms/Lecture room D-001/Open classroom door/Solid collision" unique_id=1144591993]
-shape = SubResource("BoxShape3D_ri032")
-
 [node name="Teaching whiteboard frame" type="MeshInstance3D" parent="White Campus Extensions C and D/Block D/Floor 0 central corridor and classrooms/Lecture room D-001" unique_id=843336056]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -5.15, 1.99, -14.37)
 material_override = SubResource("ShaderMaterial_yujn1")
@@ -94064,16 +93754,6 @@ text = "D-003"
 font_size = 24
 outline_size = 0
 
-[node name="Open classroom door" type="MeshInstance3D" parent="White Campus Extensions C and D/Block D/Floor 0 central corridor and classrooms/Lecture room D-003" unique_id=30107378]
-transform = Transform3D(0.5816831, 0, -0.8134155, 0, 1, 0, 0.8134155, 0, 0.5816831, -2.05, 1.36, -0.8)
-material_override = SubResource("ShaderMaterial_fjae0")
-mesh = SubResource("ArrayMesh_s5l5n")
-
-[node name="Solid collision" type="StaticBody3D" parent="White Campus Extensions C and D/Block D/Floor 0 central corridor and classrooms/Lecture room D-003/Open classroom door" unique_id=998001277]
-
-[node name="@CollisionShape3D@4726" type="CollisionShape3D" parent="White Campus Extensions C and D/Block D/Floor 0 central corridor and classrooms/Lecture room D-003/Open classroom door/Solid collision" unique_id=805679081]
-shape = SubResource("BoxShape3D_52sj5")
-
 [node name="Teaching whiteboard frame" type="MeshInstance3D" parent="White Campus Extensions C and D/Block D/Floor 0 central corridor and classrooms/Lecture room D-003" unique_id=1910673834]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -5.15, 1.99, -6.87)
 material_override = SubResource("ShaderMaterial_yujn1")
@@ -94716,16 +94396,6 @@ modulate = Color(0.75, 0.72, 0.56, 1)
 text = "D-005"
 font_size = 24
 outline_size = 0
-
-[node name="Open classroom door" type="MeshInstance3D" parent="White Campus Extensions C and D/Block D/Floor 0 central corridor and classrooms/Lecture room D-005" unique_id=1660318648]
-transform = Transform3D(0.5816831, 0, -0.8134155, 0, 1, 0, 0.8134155, 0, 0.5816831, -2.05, 1.36, 6.7)
-material_override = SubResource("ShaderMaterial_fjae0")
-mesh = SubResource("ArrayMesh_s5l5n")
-
-[node name="Solid collision" type="StaticBody3D" parent="White Campus Extensions C and D/Block D/Floor 0 central corridor and classrooms/Lecture room D-005/Open classroom door" unique_id=706809318]
-
-[node name="@CollisionShape3D@4832" type="CollisionShape3D" parent="White Campus Extensions C and D/Block D/Floor 0 central corridor and classrooms/Lecture room D-005/Open classroom door/Solid collision" unique_id=1384675575]
-shape = SubResource("BoxShape3D_xgyjh")
 
 [node name="Teaching whiteboard frame" type="MeshInstance3D" parent="White Campus Extensions C and D/Block D/Floor 0 central corridor and classrooms/Lecture room D-005" unique_id=709448429]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -5.15, 1.99, 0.63)
@@ -95813,16 +95483,6 @@ text = "D-002"
 font_size = 24
 outline_size = 0
 
-[node name="Open classroom door" type="MeshInstance3D" parent="White Campus Extensions C and D/Block D/Floor 0 central corridor and classrooms/Lecture room D-002" unique_id=1270058599]
-transform = Transform3D(0.5816831, 0, 0.8134155, 0, 1, 0, -0.8134155, 0, 0.5816831, 2.05, 1.36, -8.3)
-material_override = SubResource("ShaderMaterial_fjae0")
-mesh = SubResource("ArrayMesh_s5l5n")
-
-[node name="Solid collision" type="StaticBody3D" parent="White Campus Extensions C and D/Block D/Floor 0 central corridor and classrooms/Lecture room D-002/Open classroom door" unique_id=1099476673]
-
-[node name="@CollisionShape3D@5026" type="CollisionShape3D" parent="White Campus Extensions C and D/Block D/Floor 0 central corridor and classrooms/Lecture room D-002/Open classroom door/Solid collision" unique_id=1113479077]
-shape = SubResource("BoxShape3D_n7xjv")
-
 [node name="Teaching whiteboard frame" type="MeshInstance3D" parent="White Campus Extensions C and D/Block D/Floor 0 central corridor and classrooms/Lecture room D-002" unique_id=1436085241]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 5.15, 1.99, -14.37)
 material_override = SubResource("ShaderMaterial_yujn1")
@@ -96526,16 +96186,6 @@ text = "D-004"
 font_size = 24
 outline_size = 0
 
-[node name="Open classroom door" type="MeshInstance3D" parent="White Campus Extensions C and D/Block D/Floor 0 central corridor and classrooms/Lecture room D-004" unique_id=1400650624]
-transform = Transform3D(0.5816831, 0, 0.8134155, 0, 1, 0, -0.8134155, 0, 0.5816831, 2.05, 1.36, -0.8)
-material_override = SubResource("ShaderMaterial_fjae0")
-mesh = SubResource("ArrayMesh_s5l5n")
-
-[node name="Solid collision" type="StaticBody3D" parent="White Campus Extensions C and D/Block D/Floor 0 central corridor and classrooms/Lecture room D-004/Open classroom door" unique_id=2131414941]
-
-[node name="@CollisionShape3D@5141" type="CollisionShape3D" parent="White Campus Extensions C and D/Block D/Floor 0 central corridor and classrooms/Lecture room D-004/Open classroom door/Solid collision" unique_id=149066092]
-shape = SubResource("BoxShape3D_5ct6y")
-
 [node name="Teaching whiteboard frame" type="MeshInstance3D" parent="White Campus Extensions C and D/Block D/Floor 0 central corridor and classrooms/Lecture room D-004" unique_id=2117081055]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 5.15, 1.99, -6.87)
 material_override = SubResource("ShaderMaterial_yujn1")
@@ -97178,16 +96828,6 @@ modulate = Color(0.75, 0.72, 0.56, 1)
 text = "D-006"
 font_size = 24
 outline_size = 0
-
-[node name="Open classroom door" type="MeshInstance3D" parent="White Campus Extensions C and D/Block D/Floor 0 central corridor and classrooms/Lecture room D-006" unique_id=446602129]
-transform = Transform3D(0.5816831, 0, 0.8134155, 0, 1, 0, -0.8134155, 0, 0.5816831, 2.05, 1.36, 6.7)
-material_override = SubResource("ShaderMaterial_fjae0")
-mesh = SubResource("ArrayMesh_s5l5n")
-
-[node name="Solid collision" type="StaticBody3D" parent="White Campus Extensions C and D/Block D/Floor 0 central corridor and classrooms/Lecture room D-006/Open classroom door" unique_id=1660194963]
-
-[node name="@CollisionShape3D@5247" type="CollisionShape3D" parent="White Campus Extensions C and D/Block D/Floor 0 central corridor and classrooms/Lecture room D-006/Open classroom door/Solid collision" unique_id=1444774737]
-shape = SubResource("BoxShape3D_rvvyj")
 
 [node name="Teaching whiteboard frame" type="MeshInstance3D" parent="White Campus Extensions C and D/Block D/Floor 0 central corridor and classrooms/Lecture room D-006" unique_id=830846624]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 5.15, 1.99, 0.63)
@@ -99100,16 +98740,6 @@ text = "D-101"
 font_size = 24
 outline_size = 0
 
-[node name="Open classroom door" type="MeshInstance3D" parent="White Campus Extensions C and D/Block D/Floor 1 central corridor and classrooms/Lecture room D-101" unique_id=481565539]
-transform = Transform3D(0.5816831, 0, -0.8134155, 0, 1, 0, 0.8134155, 0, 0.5816831, -2.05, 4.51, -8.3)
-material_override = SubResource("ShaderMaterial_fjae0")
-mesh = SubResource("ArrayMesh_s5l5n")
-
-[node name="Solid collision" type="StaticBody3D" parent="White Campus Extensions C and D/Block D/Floor 1 central corridor and classrooms/Lecture room D-101/Open classroom door" unique_id=387400325]
-
-[node name="@CollisionShape3D@5574" type="CollisionShape3D" parent="White Campus Extensions C and D/Block D/Floor 1 central corridor and classrooms/Lecture room D-101/Open classroom door/Solid collision" unique_id=50199032]
-shape = SubResource("BoxShape3D_d728e")
-
 [node name="Teaching whiteboard frame" type="MeshInstance3D" parent="White Campus Extensions C and D/Block D/Floor 1 central corridor and classrooms/Lecture room D-101" unique_id=1475963728]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -5.15, 5.14, -14.37)
 material_override = SubResource("ShaderMaterial_yujn1")
@@ -99753,16 +99383,6 @@ text = "D-103"
 font_size = 24
 outline_size = 0
 
-[node name="Open classroom door" type="MeshInstance3D" parent="White Campus Extensions C and D/Block D/Floor 1 central corridor and classrooms/Lecture room D-103" unique_id=964243740]
-transform = Transform3D(0.5816831, 0, -0.8134155, 0, 1, 0, 0.8134155, 0, 0.5816831, -2.05, 4.51, -0.8)
-material_override = SubResource("ShaderMaterial_fjae0")
-mesh = SubResource("ArrayMesh_s5l5n")
-
-[node name="Solid collision" type="StaticBody3D" parent="White Campus Extensions C and D/Block D/Floor 1 central corridor and classrooms/Lecture room D-103/Open classroom door" unique_id=1956145298]
-
-[node name="@CollisionShape3D@5680" type="CollisionShape3D" parent="White Campus Extensions C and D/Block D/Floor 1 central corridor and classrooms/Lecture room D-103/Open classroom door/Solid collision" unique_id=2098520652]
-shape = SubResource("BoxShape3D_llxiq")
-
 [node name="Teaching whiteboard frame" type="MeshInstance3D" parent="White Campus Extensions C and D/Block D/Floor 1 central corridor and classrooms/Lecture room D-103" unique_id=1371281054]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -5.15, 5.14, -6.87)
 material_override = SubResource("ShaderMaterial_yujn1")
@@ -100405,16 +100025,6 @@ modulate = Color(0.75, 0.72, 0.56, 1)
 text = "D-105"
 font_size = 24
 outline_size = 0
-
-[node name="Open classroom door" type="MeshInstance3D" parent="White Campus Extensions C and D/Block D/Floor 1 central corridor and classrooms/Lecture room D-105" unique_id=2121939303]
-transform = Transform3D(0.5816831, 0, -0.8134155, 0, 1, 0, 0.8134155, 0, 0.5816831, -2.05, 4.51, 6.7)
-material_override = SubResource("ShaderMaterial_fjae0")
-mesh = SubResource("ArrayMesh_s5l5n")
-
-[node name="Solid collision" type="StaticBody3D" parent="White Campus Extensions C and D/Block D/Floor 1 central corridor and classrooms/Lecture room D-105/Open classroom door" unique_id=1023290483]
-
-[node name="@CollisionShape3D@5786" type="CollisionShape3D" parent="White Campus Extensions C and D/Block D/Floor 1 central corridor and classrooms/Lecture room D-105/Open classroom door/Solid collision" unique_id=666882549]
-shape = SubResource("BoxShape3D_3ylt2")
 
 [node name="Teaching whiteboard frame" type="MeshInstance3D" parent="White Campus Extensions C and D/Block D/Floor 1 central corridor and classrooms/Lecture room D-105" unique_id=351033373]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -5.15, 5.14, 0.63)
@@ -101504,16 +101114,6 @@ text = "D-102"
 font_size = 24
 outline_size = 0
 
-[node name="Open classroom door" type="MeshInstance3D" parent="White Campus Extensions C and D/Block D/Floor 1 central corridor and classrooms/Lecture room D-102" unique_id=882879599]
-transform = Transform3D(0.5816831, 0, 0.8134155, 0, 1, 0, -0.8134155, 0, 0.5816831, 2.05, 4.51, -8.3)
-material_override = SubResource("ShaderMaterial_fjae0")
-mesh = SubResource("ArrayMesh_s5l5n")
-
-[node name="Solid collision" type="StaticBody3D" parent="White Campus Extensions C and D/Block D/Floor 1 central corridor and classrooms/Lecture room D-102/Open classroom door" unique_id=459942912]
-
-[node name="@CollisionShape3D@5981" type="CollisionShape3D" parent="White Campus Extensions C and D/Block D/Floor 1 central corridor and classrooms/Lecture room D-102/Open classroom door/Solid collision" unique_id=1933204463]
-shape = SubResource("BoxShape3D_eh7bl")
-
 [node name="Teaching whiteboard frame" type="MeshInstance3D" parent="White Campus Extensions C and D/Block D/Floor 1 central corridor and classrooms/Lecture room D-102" unique_id=2061194334]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 5.15, 5.14, -14.37)
 material_override = SubResource("ShaderMaterial_yujn1")
@@ -102217,16 +101817,6 @@ text = "D-104"
 font_size = 24
 outline_size = 0
 
-[node name="Open classroom door" type="MeshInstance3D" parent="White Campus Extensions C and D/Block D/Floor 1 central corridor and classrooms/Lecture room D-104" unique_id=409869165]
-transform = Transform3D(0.5816831, 0, 0.8134155, 0, 1, 0, -0.8134155, 0, 0.5816831, 2.05, 4.51, -0.8)
-material_override = SubResource("ShaderMaterial_fjae0")
-mesh = SubResource("ArrayMesh_s5l5n")
-
-[node name="Solid collision" type="StaticBody3D" parent="White Campus Extensions C and D/Block D/Floor 1 central corridor and classrooms/Lecture room D-104/Open classroom door" unique_id=990241186]
-
-[node name="@CollisionShape3D@6096" type="CollisionShape3D" parent="White Campus Extensions C and D/Block D/Floor 1 central corridor and classrooms/Lecture room D-104/Open classroom door/Solid collision" unique_id=564228739]
-shape = SubResource("BoxShape3D_cxyww")
-
 [node name="Teaching whiteboard frame" type="MeshInstance3D" parent="White Campus Extensions C and D/Block D/Floor 1 central corridor and classrooms/Lecture room D-104" unique_id=1298494215]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 5.15, 5.14, -6.87)
 material_override = SubResource("ShaderMaterial_yujn1")
@@ -102869,16 +102459,6 @@ modulate = Color(0.75, 0.72, 0.56, 1)
 text = "D-106"
 font_size = 24
 outline_size = 0
-
-[node name="Open classroom door" type="MeshInstance3D" parent="White Campus Extensions C and D/Block D/Floor 1 central corridor and classrooms/Lecture room D-106" unique_id=893347611]
-transform = Transform3D(0.5816831, 0, 0.8134155, 0, 1, 0, -0.8134155, 0, 0.5816831, 2.05, 4.51, 6.7)
-material_override = SubResource("ShaderMaterial_fjae0")
-mesh = SubResource("ArrayMesh_s5l5n")
-
-[node name="Solid collision" type="StaticBody3D" parent="White Campus Extensions C and D/Block D/Floor 1 central corridor and classrooms/Lecture room D-106/Open classroom door" unique_id=921292150]
-
-[node name="@CollisionShape3D@6202" type="CollisionShape3D" parent="White Campus Extensions C and D/Block D/Floor 1 central corridor and classrooms/Lecture room D-106/Open classroom door/Solid collision" unique_id=746273884]
-shape = SubResource("BoxShape3D_tdkn8")
 
 [node name="Teaching whiteboard frame" type="MeshInstance3D" parent="White Campus Extensions C and D/Block D/Floor 1 central corridor and classrooms/Lecture room D-106" unique_id=1674368535]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 5.15, 5.14, 0.63)
@@ -104526,16 +104106,6 @@ text = "D-201"
 font_size = 24
 outline_size = 0
 
-[node name="Open classroom door" type="MeshInstance3D" parent="White Campus Extensions C and D/Block D/Floor 2 central corridor and classrooms/Lecture room D-201" unique_id=1192851899]
-transform = Transform3D(0.5816831, 0, -0.8134155, 0, 1, 0, 0.8134155, 0, 0.5816831, -2.05, 7.66, -8.3)
-material_override = SubResource("ShaderMaterial_fjae0")
-mesh = SubResource("ArrayMesh_s5l5n")
-
-[node name="Solid collision" type="StaticBody3D" parent="White Campus Extensions C and D/Block D/Floor 2 central corridor and classrooms/Lecture room D-201/Open classroom door" unique_id=72014401]
-
-[node name="@CollisionShape3D@6478" type="CollisionShape3D" parent="White Campus Extensions C and D/Block D/Floor 2 central corridor and classrooms/Lecture room D-201/Open classroom door/Solid collision" unique_id=1296139156]
-shape = SubResource("BoxShape3D_ep3w0")
-
 [node name="Teaching whiteboard frame" type="MeshInstance3D" parent="White Campus Extensions C and D/Block D/Floor 2 central corridor and classrooms/Lecture room D-201" unique_id=1341462158]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -5.15, 8.29, -14.37)
 material_override = SubResource("ShaderMaterial_yujn1")
@@ -105179,16 +104749,6 @@ text = "D-203"
 font_size = 24
 outline_size = 0
 
-[node name="Open classroom door" type="MeshInstance3D" parent="White Campus Extensions C and D/Block D/Floor 2 central corridor and classrooms/Lecture room D-203" unique_id=1470889430]
-transform = Transform3D(0.5816831, 0, -0.8134155, 0, 1, 0, 0.8134155, 0, 0.5816831, -2.05, 7.66, -0.8)
-material_override = SubResource("ShaderMaterial_fjae0")
-mesh = SubResource("ArrayMesh_s5l5n")
-
-[node name="Solid collision" type="StaticBody3D" parent="White Campus Extensions C and D/Block D/Floor 2 central corridor and classrooms/Lecture room D-203/Open classroom door" unique_id=1561704420]
-
-[node name="@CollisionShape3D@6584" type="CollisionShape3D" parent="White Campus Extensions C and D/Block D/Floor 2 central corridor and classrooms/Lecture room D-203/Open classroom door/Solid collision" unique_id=79752664]
-shape = SubResource("BoxShape3D_n6dq7")
-
 [node name="Teaching whiteboard frame" type="MeshInstance3D" parent="White Campus Extensions C and D/Block D/Floor 2 central corridor and classrooms/Lecture room D-203" unique_id=288251236]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -5.15, 8.29, -6.87)
 material_override = SubResource("ShaderMaterial_yujn1")
@@ -105831,16 +105391,6 @@ modulate = Color(0.75, 0.72, 0.56, 1)
 text = "D-205"
 font_size = 24
 outline_size = 0
-
-[node name="Open classroom door" type="MeshInstance3D" parent="White Campus Extensions C and D/Block D/Floor 2 central corridor and classrooms/Lecture room D-205" unique_id=736565180]
-transform = Transform3D(0.5816831, 0, -0.8134155, 0, 1, 0, 0.8134155, 0, 0.5816831, -2.05, 7.66, 6.7)
-material_override = SubResource("ShaderMaterial_fjae0")
-mesh = SubResource("ArrayMesh_s5l5n")
-
-[node name="Solid collision" type="StaticBody3D" parent="White Campus Extensions C and D/Block D/Floor 2 central corridor and classrooms/Lecture room D-205/Open classroom door" unique_id=1415981916]
-
-[node name="@CollisionShape3D@6690" type="CollisionShape3D" parent="White Campus Extensions C and D/Block D/Floor 2 central corridor and classrooms/Lecture room D-205/Open classroom door/Solid collision" unique_id=569862876]
-shape = SubResource("BoxShape3D_bvll7")
 
 [node name="Teaching whiteboard frame" type="MeshInstance3D" parent="White Campus Extensions C and D/Block D/Floor 2 central corridor and classrooms/Lecture room D-205" unique_id=950964161]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -5.15, 8.29, 0.63)
@@ -106930,16 +106480,6 @@ text = "D-202"
 font_size = 24
 outline_size = 0
 
-[node name="Open classroom door" type="MeshInstance3D" parent="White Campus Extensions C and D/Block D/Floor 2 central corridor and classrooms/Lecture room D-202" unique_id=124620899]
-transform = Transform3D(0.5816831, 0, 0.8134155, 0, 1, 0, -0.8134155, 0, 0.5816831, 2.05, 7.66, -8.3)
-material_override = SubResource("ShaderMaterial_fjae0")
-mesh = SubResource("ArrayMesh_s5l5n")
-
-[node name="Solid collision" type="StaticBody3D" parent="White Campus Extensions C and D/Block D/Floor 2 central corridor and classrooms/Lecture room D-202/Open classroom door" unique_id=21629850]
-
-[node name="@CollisionShape3D@6885" type="CollisionShape3D" parent="White Campus Extensions C and D/Block D/Floor 2 central corridor and classrooms/Lecture room D-202/Open classroom door/Solid collision" unique_id=95755392]
-shape = SubResource("BoxShape3D_r43kl")
-
 [node name="Teaching whiteboard frame" type="MeshInstance3D" parent="White Campus Extensions C and D/Block D/Floor 2 central corridor and classrooms/Lecture room D-202" unique_id=413040913]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 5.15, 8.29, -14.37)
 material_override = SubResource("ShaderMaterial_yujn1")
@@ -107583,16 +107123,6 @@ text = "D-204"
 font_size = 24
 outline_size = 0
 
-[node name="Open classroom door" type="MeshInstance3D" parent="White Campus Extensions C and D/Block D/Floor 2 central corridor and classrooms/Lecture room D-204" unique_id=1846359266]
-transform = Transform3D(0.5816831, 0, 0.8134155, 0, 1, 0, -0.8134155, 0, 0.5816831, 2.05, 7.66, -0.8)
-material_override = SubResource("ShaderMaterial_fjae0")
-mesh = SubResource("ArrayMesh_s5l5n")
-
-[node name="Solid collision" type="StaticBody3D" parent="White Campus Extensions C and D/Block D/Floor 2 central corridor and classrooms/Lecture room D-204/Open classroom door" unique_id=395951667]
-
-[node name="@CollisionShape3D@6991" type="CollisionShape3D" parent="White Campus Extensions C and D/Block D/Floor 2 central corridor and classrooms/Lecture room D-204/Open classroom door/Solid collision" unique_id=1798571292]
-shape = SubResource("BoxShape3D_yoth0")
-
 [node name="Teaching whiteboard frame" type="MeshInstance3D" parent="White Campus Extensions C and D/Block D/Floor 2 central corridor and classrooms/Lecture room D-204" unique_id=1084993513]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 5.15, 8.29, -6.87)
 material_override = SubResource("ShaderMaterial_yujn1")
@@ -108235,16 +107765,6 @@ modulate = Color(0.75, 0.72, 0.56, 1)
 text = "D-206"
 font_size = 24
 outline_size = 0
-
-[node name="Open classroom door" type="MeshInstance3D" parent="White Campus Extensions C and D/Block D/Floor 2 central corridor and classrooms/Lecture room D-206" unique_id=877237722]
-transform = Transform3D(0.5816831, 0, 0.8134155, 0, 1, 0, -0.8134155, 0, 0.5816831, 2.05, 7.66, 6.7)
-material_override = SubResource("ShaderMaterial_fjae0")
-mesh = SubResource("ArrayMesh_s5l5n")
-
-[node name="Solid collision" type="StaticBody3D" parent="White Campus Extensions C and D/Block D/Floor 2 central corridor and classrooms/Lecture room D-206/Open classroom door" unique_id=45499587]
-
-[node name="@CollisionShape3D@7097" type="CollisionShape3D" parent="White Campus Extensions C and D/Block D/Floor 2 central corridor and classrooms/Lecture room D-206/Open classroom door/Solid collision" unique_id=1358515722]
-shape = SubResource("BoxShape3D_rbi5u")
 
 [node name="Teaching whiteboard frame" type="MeshInstance3D" parent="White Campus Extensions C and D/Block D/Floor 2 central corridor and classrooms/Lecture room D-206" unique_id=2145859756]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 5.15, 8.29, 0.63)
@@ -109903,16 +109423,6 @@ text = "D-301"
 font_size = 24
 outline_size = 0
 
-[node name="Open classroom door" type="MeshInstance3D" parent="White Campus Extensions C and D/Block D/Floor 3 central corridor and classrooms/Lecture room D-301" unique_id=1877217355]
-transform = Transform3D(0.5816831, 0, -0.8134155, 0, 1, 0, 0.8134155, 0, 0.5816831, -2.05, 10.81, -8.3)
-material_override = SubResource("ShaderMaterial_fjae0")
-mesh = SubResource("ArrayMesh_s5l5n")
-
-[node name="Solid collision" type="StaticBody3D" parent="White Campus Extensions C and D/Block D/Floor 3 central corridor and classrooms/Lecture room D-301/Open classroom door" unique_id=893239817]
-
-[node name="@CollisionShape3D@7375" type="CollisionShape3D" parent="White Campus Extensions C and D/Block D/Floor 3 central corridor and classrooms/Lecture room D-301/Open classroom door/Solid collision" unique_id=2000849602]
-shape = SubResource("BoxShape3D_tbaox")
-
 [node name="Teaching whiteboard frame" type="MeshInstance3D" parent="White Campus Extensions C and D/Block D/Floor 3 central corridor and classrooms/Lecture room D-301" unique_id=1932910638]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -5.15, 11.44, -14.37)
 material_override = SubResource("ShaderMaterial_yujn1")
@@ -110556,16 +110066,6 @@ text = "D-303"
 font_size = 24
 outline_size = 0
 
-[node name="Open classroom door" type="MeshInstance3D" parent="White Campus Extensions C and D/Block D/Floor 3 central corridor and classrooms/Lecture room D-303" unique_id=1619316414]
-transform = Transform3D(0.5816831, 0, -0.8134155, 0, 1, 0, 0.8134155, 0, 0.5816831, -2.05, 10.81, -0.8)
-material_override = SubResource("ShaderMaterial_fjae0")
-mesh = SubResource("ArrayMesh_s5l5n")
-
-[node name="Solid collision" type="StaticBody3D" parent="White Campus Extensions C and D/Block D/Floor 3 central corridor and classrooms/Lecture room D-303/Open classroom door" unique_id=1553531335]
-
-[node name="@CollisionShape3D@7481" type="CollisionShape3D" parent="White Campus Extensions C and D/Block D/Floor 3 central corridor and classrooms/Lecture room D-303/Open classroom door/Solid collision" unique_id=512496523]
-shape = SubResource("BoxShape3D_v7dwx")
-
 [node name="Teaching whiteboard frame" type="MeshInstance3D" parent="White Campus Extensions C and D/Block D/Floor 3 central corridor and classrooms/Lecture room D-303" unique_id=824317083]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -5.15, 11.44, -6.87)
 material_override = SubResource("ShaderMaterial_yujn1")
@@ -111208,16 +110708,6 @@ modulate = Color(0.75, 0.72, 0.56, 1)
 text = "D-305"
 font_size = 24
 outline_size = 0
-
-[node name="Open classroom door" type="MeshInstance3D" parent="White Campus Extensions C and D/Block D/Floor 3 central corridor and classrooms/Lecture room D-305" unique_id=908279772]
-transform = Transform3D(0.5816831, 0, -0.8134155, 0, 1, 0, 0.8134155, 0, 0.5816831, -2.05, 10.81, 6.7)
-material_override = SubResource("ShaderMaterial_fjae0")
-mesh = SubResource("ArrayMesh_s5l5n")
-
-[node name="Solid collision" type="StaticBody3D" parent="White Campus Extensions C and D/Block D/Floor 3 central corridor and classrooms/Lecture room D-305/Open classroom door" unique_id=889465453]
-
-[node name="@CollisionShape3D@7587" type="CollisionShape3D" parent="White Campus Extensions C and D/Block D/Floor 3 central corridor and classrooms/Lecture room D-305/Open classroom door/Solid collision" unique_id=107754900]
-shape = SubResource("BoxShape3D_v02rm")
 
 [node name="Teaching whiteboard frame" type="MeshInstance3D" parent="White Campus Extensions C and D/Block D/Floor 3 central corridor and classrooms/Lecture room D-305" unique_id=829390978]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -5.15, 11.44, 0.63)
@@ -112307,16 +111797,6 @@ text = "D-302"
 font_size = 24
 outline_size = 0
 
-[node name="Open classroom door" type="MeshInstance3D" parent="White Campus Extensions C and D/Block D/Floor 3 central corridor and classrooms/Lecture room D-302" unique_id=2063868864]
-transform = Transform3D(0.5816831, 0, 0.8134155, 0, 1, 0, -0.8134155, 0, 0.5816831, 2.05, 10.81, -8.3)
-material_override = SubResource("ShaderMaterial_fjae0")
-mesh = SubResource("ArrayMesh_s5l5n")
-
-[node name="Solid collision" type="StaticBody3D" parent="White Campus Extensions C and D/Block D/Floor 3 central corridor and classrooms/Lecture room D-302/Open classroom door" unique_id=447570033]
-
-[node name="@CollisionShape3D@7782" type="CollisionShape3D" parent="White Campus Extensions C and D/Block D/Floor 3 central corridor and classrooms/Lecture room D-302/Open classroom door/Solid collision" unique_id=438249568]
-shape = SubResource("BoxShape3D_fpsbn")
-
 [node name="Teaching whiteboard frame" type="MeshInstance3D" parent="White Campus Extensions C and D/Block D/Floor 3 central corridor and classrooms/Lecture room D-302" unique_id=1938677847]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 5.15, 11.44, -14.37)
 material_override = SubResource("ShaderMaterial_yujn1")
@@ -112960,16 +112440,6 @@ text = "D-304"
 font_size = 24
 outline_size = 0
 
-[node name="Open classroom door" type="MeshInstance3D" parent="White Campus Extensions C and D/Block D/Floor 3 central corridor and classrooms/Lecture room D-304" unique_id=615757812]
-transform = Transform3D(0.5816831, 0, 0.8134155, 0, 1, 0, -0.8134155, 0, 0.5816831, 2.05, 10.81, -0.8)
-material_override = SubResource("ShaderMaterial_fjae0")
-mesh = SubResource("ArrayMesh_s5l5n")
-
-[node name="Solid collision" type="StaticBody3D" parent="White Campus Extensions C and D/Block D/Floor 3 central corridor and classrooms/Lecture room D-304/Open classroom door" unique_id=727447754]
-
-[node name="@CollisionShape3D@7888" type="CollisionShape3D" parent="White Campus Extensions C and D/Block D/Floor 3 central corridor and classrooms/Lecture room D-304/Open classroom door/Solid collision" unique_id=1881780696]
-shape = SubResource("BoxShape3D_ejxei")
-
 [node name="Teaching whiteboard frame" type="MeshInstance3D" parent="White Campus Extensions C and D/Block D/Floor 3 central corridor and classrooms/Lecture room D-304" unique_id=924573052]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 5.15, 11.44, -6.87)
 material_override = SubResource("ShaderMaterial_yujn1")
@@ -113612,16 +113082,6 @@ modulate = Color(0.75, 0.72, 0.56, 1)
 text = "D-306"
 font_size = 24
 outline_size = 0
-
-[node name="Open classroom door" type="MeshInstance3D" parent="White Campus Extensions C and D/Block D/Floor 3 central corridor and classrooms/Lecture room D-306" unique_id=1213606625]
-transform = Transform3D(0.5816831, 0, 0.8134155, 0, 1, 0, -0.8134155, 0, 0.5816831, 2.05, 10.81, 6.7)
-material_override = SubResource("ShaderMaterial_fjae0")
-mesh = SubResource("ArrayMesh_s5l5n")
-
-[node name="Solid collision" type="StaticBody3D" parent="White Campus Extensions C and D/Block D/Floor 3 central corridor and classrooms/Lecture room D-306/Open classroom door" unique_id=212722465]
-
-[node name="@CollisionShape3D@7994" type="CollisionShape3D" parent="White Campus Extensions C and D/Block D/Floor 3 central corridor and classrooms/Lecture room D-306/Open classroom door/Solid collision" unique_id=193397772]
-shape = SubResource("BoxShape3D_v4b5p")
 
 [node name="Teaching whiteboard frame" type="MeshInstance3D" parent="White Campus Extensions C and D/Block D/Floor 3 central corridor and classrooms/Lecture room D-306" unique_id=1197018972]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 5.15, 11.44, 0.63)
@@ -115270,16 +114730,6 @@ text = "D-401"
 font_size = 24
 outline_size = 0
 
-[node name="Open classroom door" type="MeshInstance3D" parent="White Campus Extensions C and D/Block D/Floor 4 central corridor and classrooms/Lecture room D-401" unique_id=2071824188]
-transform = Transform3D(0.5816831, 0, -0.8134155, 0, 1, 0, 0.8134155, 0, 0.5816831, -2.05, 13.96, -8.3)
-material_override = SubResource("ShaderMaterial_fjae0")
-mesh = SubResource("ArrayMesh_s5l5n")
-
-[node name="Solid collision" type="StaticBody3D" parent="White Campus Extensions C and D/Block D/Floor 4 central corridor and classrooms/Lecture room D-401/Open classroom door" unique_id=311905669]
-
-[node name="@CollisionShape3D@8270" type="CollisionShape3D" parent="White Campus Extensions C and D/Block D/Floor 4 central corridor and classrooms/Lecture room D-401/Open classroom door/Solid collision" unique_id=1737516108]
-shape = SubResource("BoxShape3D_wat3i")
-
 [node name="Teaching whiteboard frame" type="MeshInstance3D" parent="White Campus Extensions C and D/Block D/Floor 4 central corridor and classrooms/Lecture room D-401" unique_id=2012871580]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -5.15, 14.59, -14.37)
 material_override = SubResource("ShaderMaterial_yujn1")
@@ -115923,16 +115373,6 @@ text = "D-403"
 font_size = 24
 outline_size = 0
 
-[node name="Open classroom door" type="MeshInstance3D" parent="White Campus Extensions C and D/Block D/Floor 4 central corridor and classrooms/Lecture room D-403" unique_id=38362629]
-transform = Transform3D(0.5816831, 0, -0.8134155, 0, 1, 0, 0.8134155, 0, 0.5816831, -2.05, 13.96, -0.8)
-material_override = SubResource("ShaderMaterial_fjae0")
-mesh = SubResource("ArrayMesh_s5l5n")
-
-[node name="Solid collision" type="StaticBody3D" parent="White Campus Extensions C and D/Block D/Floor 4 central corridor and classrooms/Lecture room D-403/Open classroom door" unique_id=265174867]
-
-[node name="@CollisionShape3D@8376" type="CollisionShape3D" parent="White Campus Extensions C and D/Block D/Floor 4 central corridor and classrooms/Lecture room D-403/Open classroom door/Solid collision" unique_id=424611645]
-shape = SubResource("BoxShape3D_wdfmy")
-
 [node name="Teaching whiteboard frame" type="MeshInstance3D" parent="White Campus Extensions C and D/Block D/Floor 4 central corridor and classrooms/Lecture room D-403" unique_id=1048046528]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -5.15, 14.59, -6.87)
 material_override = SubResource("ShaderMaterial_yujn1")
@@ -116575,16 +116015,6 @@ modulate = Color(0.75, 0.72, 0.56, 1)
 text = "D-405"
 font_size = 24
 outline_size = 0
-
-[node name="Open classroom door" type="MeshInstance3D" parent="White Campus Extensions C and D/Block D/Floor 4 central corridor and classrooms/Lecture room D-405" unique_id=1585338777]
-transform = Transform3D(0.5816831, 0, -0.8134155, 0, 1, 0, 0.8134155, 0, 0.5816831, -2.05, 13.96, 6.7)
-material_override = SubResource("ShaderMaterial_fjae0")
-mesh = SubResource("ArrayMesh_s5l5n")
-
-[node name="Solid collision" type="StaticBody3D" parent="White Campus Extensions C and D/Block D/Floor 4 central corridor and classrooms/Lecture room D-405/Open classroom door" unique_id=1528099053]
-
-[node name="@CollisionShape3D@8482" type="CollisionShape3D" parent="White Campus Extensions C and D/Block D/Floor 4 central corridor and classrooms/Lecture room D-405/Open classroom door/Solid collision" unique_id=1965573750]
-shape = SubResource("BoxShape3D_sevk2")
 
 [node name="Teaching whiteboard frame" type="MeshInstance3D" parent="White Campus Extensions C and D/Block D/Floor 4 central corridor and classrooms/Lecture room D-405" unique_id=879634173]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -5.15, 14.59, 0.63)
@@ -117674,16 +117104,6 @@ text = "D-402"
 font_size = 24
 outline_size = 0
 
-[node name="Open classroom door" type="MeshInstance3D" parent="White Campus Extensions C and D/Block D/Floor 4 central corridor and classrooms/Lecture room D-402" unique_id=1921197729]
-transform = Transform3D(0.5816831, 0, 0.8134155, 0, 1, 0, -0.8134155, 0, 0.5816831, 2.05, 13.96, -8.3)
-material_override = SubResource("ShaderMaterial_fjae0")
-mesh = SubResource("ArrayMesh_s5l5n")
-
-[node name="Solid collision" type="StaticBody3D" parent="White Campus Extensions C and D/Block D/Floor 4 central corridor and classrooms/Lecture room D-402/Open classroom door" unique_id=1015152160]
-
-[node name="@CollisionShape3D@8677" type="CollisionShape3D" parent="White Campus Extensions C and D/Block D/Floor 4 central corridor and classrooms/Lecture room D-402/Open classroom door/Solid collision" unique_id=1920837102]
-shape = SubResource("BoxShape3D_j11b6")
-
 [node name="Teaching whiteboard frame" type="MeshInstance3D" parent="White Campus Extensions C and D/Block D/Floor 4 central corridor and classrooms/Lecture room D-402" unique_id=710980730]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 5.15, 14.59, -14.37)
 material_override = SubResource("ShaderMaterial_yujn1")
@@ -118327,16 +117747,6 @@ text = "D-404"
 font_size = 24
 outline_size = 0
 
-[node name="Open classroom door" type="MeshInstance3D" parent="White Campus Extensions C and D/Block D/Floor 4 central corridor and classrooms/Lecture room D-404" unique_id=21495369]
-transform = Transform3D(0.5816831, 0, 0.8134155, 0, 1, 0, -0.8134155, 0, 0.5816831, 2.05, 13.96, -0.8)
-material_override = SubResource("ShaderMaterial_fjae0")
-mesh = SubResource("ArrayMesh_s5l5n")
-
-[node name="Solid collision" type="StaticBody3D" parent="White Campus Extensions C and D/Block D/Floor 4 central corridor and classrooms/Lecture room D-404/Open classroom door" unique_id=503912990]
-
-[node name="@CollisionShape3D@8783" type="CollisionShape3D" parent="White Campus Extensions C and D/Block D/Floor 4 central corridor and classrooms/Lecture room D-404/Open classroom door/Solid collision" unique_id=2120322288]
-shape = SubResource("BoxShape3D_xdttb")
-
 [node name="Teaching whiteboard frame" type="MeshInstance3D" parent="White Campus Extensions C and D/Block D/Floor 4 central corridor and classrooms/Lecture room D-404" unique_id=168501993]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 5.15, 14.59, -6.87)
 material_override = SubResource("ShaderMaterial_yujn1")
@@ -118979,16 +118389,6 @@ modulate = Color(0.75, 0.72, 0.56, 1)
 text = "D-406"
 font_size = 24
 outline_size = 0
-
-[node name="Open classroom door" type="MeshInstance3D" parent="White Campus Extensions C and D/Block D/Floor 4 central corridor and classrooms/Lecture room D-406" unique_id=356117844]
-transform = Transform3D(0.5816831, 0, 0.8134155, 0, 1, 0, -0.8134155, 0, 0.5816831, 2.05, 13.96, 6.7)
-material_override = SubResource("ShaderMaterial_fjae0")
-mesh = SubResource("ArrayMesh_s5l5n")
-
-[node name="Solid collision" type="StaticBody3D" parent="White Campus Extensions C and D/Block D/Floor 4 central corridor and classrooms/Lecture room D-406/Open classroom door" unique_id=1812883575]
-
-[node name="@CollisionShape3D@8889" type="CollisionShape3D" parent="White Campus Extensions C and D/Block D/Floor 4 central corridor and classrooms/Lecture room D-406/Open classroom door/Solid collision" unique_id=1338019799]
-shape = SubResource("BoxShape3D_761e7")
 
 [node name="Teaching whiteboard frame" type="MeshInstance3D" parent="White Campus Extensions C and D/Block D/Floor 4 central corridor and classrooms/Lecture room D-406" unique_id=38519976]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 5.15, 14.59, 0.63)

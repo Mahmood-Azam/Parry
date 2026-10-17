@@ -1,0 +1,24 @@
+[remap]
+
+importer="wav"
+type="AudioStreamWAV"
+uid="uid://cjyouc7bjw5f3"
+path="res://.godot/imported/monster-9.wav-8f122d625ec7890aecbc8fa9a74c8ad8.sample"
+
+[deps]
+
+source_file="res://assets/audio/Mutant audio/monster_sfx_pack/monster_sfx_pack/monster-9.wav"
+dest_files=["res://.godot/imported/monster-9.wav-8f122d625ec7890aecbc8fa9a74c8ad8.sample"]
+
+[params]
+
+force/8_bit=false
+force/mono=false
+force/max_rate=false
+force/max_rate_hz=44100
+edit/trim=false
+edit/normalize=false
+edit/loop_mode=0
+edit/loop_begin=0
+edit/loop_end=-1
+compress/mode=2

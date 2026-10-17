@@ -60,7 +60,7 @@ func _build_menu() -> void:
 	options_panel.size = Vector2(450.0, 610.0)
 	var options_box := options_panel.get_node("Margin/VBox") as VBoxContainer
 	var controls := Label.new()
-	controls.text = "WASD  Move\nSHIFT  Sprint\nSPACE  Jump\nF / RMB  Parry, then Block\nQ  Shadow Dash\nLMB  Fire Attack\nMMB Hold  Channel remaining fire\nRelease MMB  Launch charged air slash\nR  Fill fire instantly\n\nParry three times to trigger an automatic riposte."
+	controls.text = "WASD Move  |  SHIFT Sprint  |  SPACE Jump\nF / RMB Parry, then Block  |  Q Shadow Dash\nLMB Fire Attack  |  MMB Hold: Channel Fire\nRelease MMB: Air Slash  |  R Refill Fire\nE Ultimate: Inferno (large area blast)\nG Ultimate: Ash Execution (focused strike)\nO Collect Relic\nBank two bars of parry fire to unlock an ultimate.\nR twice also charges it for practice."
 	controls.add_theme_font_size_override("font_size", 18)
 	controls.add_theme_color_override("font_color", Color(0.82, 0.87, 0.98))
 	options_box.add_child(controls)
@@ -191,7 +191,7 @@ func _set_gameplay_process_enabled(enabled: bool) -> void:
 		player.process_mode = gameplay_mode
 	for enemy in get_tree().get_nodes_in_group("enemy"):
 		if is_instance_valid(enemy):
-			enemy.process_mode = gameplay_mode
+			enemy.process_mode = Node.PROCESS_MODE_DISABLED if enabled and is_instance_valid(player) and player.is_using_ultimate else gameplay_mode
 
 
 func _show_home() -> void:

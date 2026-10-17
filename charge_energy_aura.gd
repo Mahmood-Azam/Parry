@@ -117,8 +117,8 @@ func _ready() -> void:
 
 
 func refresh() -> void:
-	requested_active = is_instance_valid(controller) and controller.is_alive and controller.is_fire_channeling
-	requested_power = clampf(controller.fire_channel_charge / maxf(controller.fire_meter_max,1.0),0.0,1.0) if requested_active else 0.0
+	requested_active = is_instance_valid(controller) and controller.is_alive and (controller.is_fire_channeling or controller.is_using_ultimate)
+	requested_power = (controller.ultimate_power if controller.is_using_ultimate else clampf(controller.fire_channel_charge / maxf(controller.fire_meter_max,1.0),0.0,1.0)) if requested_active else 0.0
 
 
 func _process(delta: float) -> void:
