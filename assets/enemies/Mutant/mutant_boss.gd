@@ -48,7 +48,19 @@ func _import_clips() -> void:
 			continue
 		var animation := source_player.get_animation("mixamo_com").duplicate(true) as Animation
 		for track in animation.get_track_count():
-			animation.track_set_path(track, NodePath("MutantModel/" + String(animation.track_get_path(track))))
+			var track_path := String(animation.track_get_path(track))
+			if clip_name == "Walk" and animation.track_get_type(track) == Animation.TYPE_POSITION_3D and track_path.ends_with(":mixamorig_Hips"):
+				# The supplied walk travels 1.7 m forward in its hip track. Replaying
+				# that travel snaps the visible model backward at every loop boundary.
+				# CharacterBody3D already moves through the world, so keep only the
+				# vertical bounce from the clip.
+				var first_position: Vector3 = animation.track_get_key_value(track, 0)
+				for key_index in animation.track_get_key_count(track):
+					var hip_position: Vector3 = animation.track_get_key_value(track, key_index)
+					hip_position.x = first_position.x
+					hip_position.z = first_position.z
+					animation.track_set_key_value(track, key_index, hip_position)
+			animation.track_set_path(track, NodePath("MutantModel/" + track_path))
 		animation.loop_mode = Animation.LOOP_LINEAR if clip_name in ["Idle", "Walk"] else Animation.LOOP_NONE
 		library.add_animation(clip_name, animation)
 		source_root.free()
@@ -192,7 +204,7 @@ func apply_stun(duration: float = -1.0) -> void:
 	_play(&"Idle", true)
 	_spawn_stun_effect()
 
-func take_damage(amount: float, _attacker: Node = null) -> bool:
+func take_damage(amount: float, _attacker: Node = null, play_hit_audio: bool = true) -> bool:
 	if is_dead or amount <= 0.0:
 		return false
 	# Keep the existing P quick-playtest shortcut lethal for this boss too.
@@ -220,6 +232,10 @@ func take_damage(amount: float, _attacker: Node = null) -> bool:
 	if current_health <= 0.0:
 		_die()
 	return true
+
+func take_burn_damage(amount: float, attacker: Node = null) -> bool:
+	# Ultimate burn ticks apply damage without restarting the impact sound.
+	return take_damage(amount, attacker, false)
 
 func _on_animation_finished(animation_name: StringName) -> void:
 	if animation_name == &"Flex":
@@ -251,4 +267,3 @@ func _die() -> void:
 	died.emit()
 	var death_clip := animation_player.get_animation(&"Death")
 	get_tree().create_timer(death_clip.length + 0.5).timeout.connect(queue_free)
-

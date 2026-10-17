@@ -4,9 +4,13 @@ extends Node3D
 const ENEMY := preload("res://assets/enemies/skeleton/shadow_enemy.tscn")
 const MAGE := preload("res://assets/enemies/mage/shadowkin_mage.tscn")
 const MUTANT := preload("res://assets/enemies/Mutant/mutant_boss.tscn")
+const GREMLIN := preload("res://assets/enemies/gremlin/gremlin_enemy.tscn")
+const OWL := preload("res://assets/npc/owl/owl_companion.gd")
 const RELIC_ROOM_PATH := "CampusMap/White Campus Extensions C and D/Block C/Floor 1 central corridor and classrooms/Lecture room C-101"
 const RELIC_LOCAL := Vector3(-3.2, 4.35, -10.0)
-const MUTANT_LOCAL := Vector3(0.5, 3.45, -10.4)
+const MUTANT_LOCAL := Vector3(0.5, 3.45, -14.0)
+const GREMLIN_LOCAL := [Vector3(-0.5, 3.45, -17.0), Vector3(1.45, 3.45, -17.5)]
+const MAX_ACTIVE_GREMLINS := 8
 const STAGES := [
 	{"name": "THE COURTYARD", "hint": "Clear the courtyard. Enter the amber-lit Block D doorway.", "trigger": Vector3(35, 0.1, -74), "spawns": [Vector3(35, 0.15, -79), Vector3(31.5, 0.15, -77)], "gate": Vector3(40.15, 1.6, -74.55), "gate_size": Vector3(0.12, 2.9, 2.4)},
 	{"name": "BLOCK D — ENTRANCE", "hint": "Clear the lobby, then turn right into the long corridor.", "trigger": Vector3(44.5, 0.3, -74.55), "spawns": [Vector3(47, 0.4, -74.55), Vector3(49, 0.4, -77)], "gate": Vector3(49, 1.7, -80), "gate_size": Vector3(2.75, 2.9, 0.12)},
@@ -27,11 +31,14 @@ var boss_bar: ProgressBar
 var boss_title: Label
 var boss: CharacterBody3D
 var mutant: CharacterBody3D
+var gremlin_wave_timer: Timer
+var gremlins: Array[CharacterBody3D] = []
 var player: CharacterBody3D
 var ui_clock: float = 0.0
 var relic_phase: int = 0
 var relic_count: int = 0
 var relic: Node3D
+var owl: Node3D
 var pickup_prompt: Label
 var message_label: Label
 
@@ -102,11 +109,18 @@ func _process(delta: float) -> void:
 		_update_hud()
 
 func _input(event: InputEvent) -> void:
-	if relic_phase != 1 or not is_instance_valid(relic) or not player.is_alive:
+	if not is_instance_valid(player) or not player.is_alive or not event is InputEventKey or not event.pressed or event.echo:
 		return
-	if event is InputEventKey and event.pressed and not event.echo and event.keycode == KEY_O:
+	if relic_phase == 1 and is_instance_valid(relic) and event.keycode == KEY_O:
 		if player.global_position.distance_to(relic.global_position) < 2.2:
 			_collect_relic()
+			get_viewport().set_input_as_handled()
+	elif relic_phase == 3 and is_instance_valid(owl):
+		if event.keycode == KEY_K and owl.call("call_owl", player):
+			_update_hud()
+			get_viewport().set_input_as_handled()
+		elif event.keycode == KEY_O and owl.call("interact", relic_count):
+			_update_hud()
 			get_viewport().set_input_as_handled()
 
 func _start_encounter() -> void:
@@ -245,7 +259,8 @@ func _build_hud() -> void:
 
 func _update_hud() -> void:
 	if relic_phase == 3:
-		objective.text = "MUTANT DEFEATED\n1/5 relics collected."
+		var owl_hint := "Watch the Owl." if is_instance_valid(owl) and owl.get("is_intro") else "Press K to call the Owl. Press O when it asks about the relics."
+		objective.text = "MUTANT DEFEATED\n%d/5 relics collected. %s" % [relic_count, owl_hint]
 		return
 	if relic_phase == 1:
 		objective.text = "FIND ROOM C-101\nBlock C, first floor. Take the central stairs between D and C."
@@ -334,14 +349,54 @@ func _place_mutant() -> void:
 	mutant.engaged_player.connect(_update_hud)
 	get_parent().add_child(mutant)
 	mutant.health_bar.hide()
+	gremlin_wave_timer = Timer.new()
+	gremlin_wave_timer.wait_time = 10.0
+	gremlin_wave_timer.timeout.connect(_spawn_gremlin_wave)
+	add_child(gremlin_wave_timer)
+	gremlin_wave_timer.start()
+
+func _spawn_gremlin_wave() -> void:
+	if relic_phase != 2 or not player.is_alive or not is_instance_valid(mutant) or mutant.is_dead:
+		return
+	gremlins = gremlins.filter(func(enemy: CharacterBody3D) -> bool: return is_instance_valid(enemy) and not enemy.is_dead)
+	var room := get_parent().get_node(RELIC_ROOM_PATH) as Node3D
+	for local_position in GREMLIN_LOCAL:
+		if gremlins.size() >= MAX_ACTIVE_GREMLINS:
+			break
+		var gremlin := GREMLIN.instantiate() as CharacterBody3D
+		gremlin.name = "MutantGremlin%d" % gremlins.size()
+		gremlin.position = room.to_global(local_position)
+		gremlin.process_mode = Node.PROCESS_MODE_DISABLED if player.is_using_ultimate else Node.PROCESS_MODE_PAUSABLE
+		get_parent().add_child(gremlin)
+		gremlins.append(gremlin)
 
 func _mutant_defeated() -> void:
+	if completed:
+		return
+	if is_instance_valid(gremlin_wave_timer):
+		gremlin_wave_timer.stop()
+	for gremlin in gremlins:
+		if is_instance_valid(gremlin):
+			gremlin.queue_free()
+	gremlins.clear()
 	relic_phase = 3
 	completed = true
 	boss_bar.hide()
 	boss_title.hide()
 	message_label.text = "THE MUTANT HAS FALLEN"
 	message_label.show()
+	owl = OWL.new() as Node3D
+	owl.name = "OwlCompanion"
+	add_child(owl)
+	owl.connect("orbit_finished", _owl_orbit_finished)
+	owl.connect("intro_finished", _owl_intro_finished)
+	owl.call("start_intro", player)
+	_update_hud()
+
+func _owl_orbit_finished() -> void:
+	message_label.hide()
+
+func _owl_intro_finished() -> void:
 	_update_hud()
 
 func _emissive(color: Color, energy: float) -> StandardMaterial3D:

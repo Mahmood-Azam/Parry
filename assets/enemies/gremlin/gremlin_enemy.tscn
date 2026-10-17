@@ -1,0 +1,33 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://assets/enemies/gremlin/gremlin_enemy.gd" id="1"]
+[ext_resource type="PackedScene" path="res://assets/enemies/gremlin/source/GR_Dokkeabi.fbx" id="2"]
+
+[sub_resource type="CapsuleShape3D" id="Body"]
+radius = 0.24
+height = 0.85
+
+[node name="GremlinEnemy" type="CharacterBody3D"]
+collision_layer = 4
+collision_mask = 7
+script = ExtResource("1")
+move_speed = 3.15
+attack_range = 1.1
+attack_cooldown = 1.65
+attack_damage = 11.0
+attack_hit_time = 0.53
+parry_contact_lead = 0.15
+parry_contact_linger = 0.09
+max_health = 55.0
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="."]
+position = Vector3(0, 0.425, 0)
+shape = SubResource("Body")
+
+[node name="SkeletonModel" type="Node3D" parent="."]
+scale = Vector3(1.7, 1.7, 1.7)
+
+[node name="GremlinModel" parent="SkeletonModel" instance=ExtResource("2")]
+position = Vector3(0, 0.04, 0)
+
+[node name="AnimationPlayer" type="AnimationPlayer" parent="SkeletonModel"]

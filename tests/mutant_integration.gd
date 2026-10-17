@@ -85,6 +85,17 @@ func run() -> void:
 	mutant.set_physics_process(false)
 	for clip in ["Idle", "Walk", "Flex", "Punch", "Jump", "Death"]:
 		check(mutant.animation_player.has_animation(clip), "Imported Mutant clip missing: " + clip)
+	var walk_clip: Animation = mutant.animation_player.get_animation("Walk")
+	var grounded_walk := false
+	for track in walk_clip.get_track_count():
+		if walk_clip.track_get_type(track) != Animation.TYPE_POSITION_3D or not String(walk_clip.track_get_path(track)).ends_with(":mixamorig_Hips"):
+			continue
+		grounded_walk = true
+		var first_position: Vector3 = walk_clip.track_get_key_value(track, 0)
+		for key_index in walk_clip.track_get_key_count(track):
+			var hip_position: Vector3 = walk_clip.track_get_key_value(track, key_index)
+			check(is_equal_approx(hip_position.x, first_position.x) and is_equal_approx(hip_position.z, first_position.z), "Walk loop must not reset horizontal hip motion")
+	check(grounded_walk, "Mutant walk must retain its hip animation track")
 	ready_player(true)
 	seek_attack(false, 0.48)
 	check(mutant.is_attack_in_parry_window(), "Punch contact must be parryable")
@@ -132,6 +143,11 @@ func run() -> void:
 	await capture("merged_mutant_ultimate")
 	await create_timer(1.5).timeout
 	check(not player.is_using_ultimate, "Ultimate must release controls after striking the Mutant")
+	mutant.hit_sound.stop()
+	mutant.take_burn_damage(1.0, player)
+	check(not mutant.hit_sound.playing, "Ultimate burn ticks must not restart the Mutant hit sound")
+	mutant.take_damage(1.0, player)
+	check(mutant.hit_sound.playing, "A direct hit must still play the Mutant hit sound")
 	mutant.take_damage(310.0, player)
 	check(mutant.flexed and mutant.flexing, "Low-health Mutant must enter its supplied recovery phase")
 	var flex_hp: float = mutant.current_health
