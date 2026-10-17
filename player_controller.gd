@@ -175,7 +175,6 @@ var parry_flash: ColorRect
 var hit_flash: ColorRect
 var parry_sound: AudioStreamPlayer
 var sword_swing_sound: AudioStreamPlayer
-var jump_sound: AudioStreamPlayer
 var attack_phase_sound := 0
 var parry_debug_ring: MeshInstance3D
 var parry_debug_material: StandardMaterial3D
@@ -260,7 +259,6 @@ func _ready() -> void:
 	_setup_combat_feedback()
 	_setup_parry_audio()
 	_setup_sword_audio()
-	_setup_jump_audio()
 	_setup_combat_stats()
 	ultimate_controller = ULTIMATE_SCRIPT.new()
 	ultimate_controller.name = "UltimateController"
@@ -392,13 +390,6 @@ func _setup_sword_audio() -> void:
 	sword_swing_sound.max_polyphony = 3
 	add_child(sword_swing_sound)
 
-
-func _setup_jump_audio() -> void:
-	jump_sound = AudioStreamPlayer.new()
-	jump_sound.name = "JumpSound"
-	jump_sound.stream = preload("res://assets/audio/jump_takeoff.wav")
-	jump_sound.volume_db = -10.0
-	add_child(jump_sound)
 
 func _play_sword_swing() -> void:
 	# A little variation keeps the supplied single sample from sounding mechanical.
@@ -959,8 +950,6 @@ func _physics_process(delta: float) -> void:
 		animation_player.speed_scale = jump_animation_speed_scale
 		last_animation = ""
 		_play("Jump")
-		jump_sound.pitch_scale = randf_range(0.96, 1.04)
-		jump_sound.play()
 
 	if is_dashing:
 		dash_elapsed += delta
@@ -1036,8 +1025,6 @@ func _physics_process(delta: float) -> void:
 	if Input.is_action_just_pressed("jump_attack") and not attacking and not blocking and not is_dashing:
 		_begin_attack("JumpAttack")
 		velocity.y = jump_velocity
-		jump_sound.pitch_scale = 0.9
-		jump_sound.play()
 	elif attack_pressed and not attacking and not blocking and not is_dashing:
 		_begin_attack("Attack")
 
