@@ -83,7 +83,7 @@ func _play_arrival() -> void:
 		return
 	_restore_control()
 	boss.collision_layer = 4
-	boss.collision_mask = 7
+	boss.collision_mask = 3
 	boss.animation_player.speed_scale = 1.0
 	boss._play(&"Idle", true)
 	boss.awareness.home = LANDING

@@ -11,13 +11,13 @@ signal projectile_fired(projectile: Node3D)
 
 @export var max_health := 85.0
 @export var attack_damage := 18.0
-@export var attack_range := 13.0
+@export var attack_range := 17.0
 @export var attack_cooldown := 2.8
 @export var windup_duration := 0.85
 @export var move_speed := 1.8
 @export var preferred_distance := 5.5
-@export var aggro_range := 11.0
-@export var leash_range := 16.0
+@export var aggro_range := 20.0
+@export var leash_range := 30.0
 var awareness := preload("res://enemy_awareness.gd").new()
 var attack_timer := 0.9
 var current_health := 85.0

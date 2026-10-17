@@ -25,8 +25,8 @@ func _ready() -> void:
 	_fit_giant()
 	# The arrival starts high above the roof; combat territory begins at landing.
 	awareness.home = Vector3(global_position.x, 6.55, global_position.z)
-	awareness.aggro_range = 18.0
-	awareness.leash_range = 30.0
+	awareness.aggro_range = 28.0
+	awareness.leash_range = 40.0
 
 func _fit_giant() -> void:
 	animation_player.advance(0.0)

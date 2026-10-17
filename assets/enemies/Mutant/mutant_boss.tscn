@@ -13,7 +13,7 @@ height = 2.55
 
 [node name="MutantBoss" type="CharacterBody3D"]
 collision_layer = 4
-collision_mask = 7
+collision_mask = 3
 script = ExtResource("1")
 
 [node name="CollisionShape3D" type="CollisionShape3D" parent="."]
@@ -42,4 +42,3 @@ volume_db = -3.0
 [node name="PunchSound" type="AudioStreamPlayer3D" parent="."]
 stream = ExtResource("6")
 volume_db = -5.0
-

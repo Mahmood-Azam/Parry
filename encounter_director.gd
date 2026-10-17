@@ -538,8 +538,8 @@ func _spawn_rooftop_mages() -> void:
 		var mage := MAGE.instantiate() as CharacterBody3D
 		mage.name = "RooftopMage%d" % (rooftop_mages.size() + 1)
 		mage.position = _actor_roof_position() + offset
-		mage.aggro_range = 16.0
-		mage.leash_range = 20.0
+		mage.aggro_range = 24.0
+		mage.leash_range = 32.0
 		mage.process_mode = Node.PROCESS_MODE_PAUSABLE
 		get_parent().add_child(mage)
 		mage.died.connect(_rooftop_mage_defeated)

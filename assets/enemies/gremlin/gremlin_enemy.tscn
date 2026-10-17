@@ -9,7 +9,7 @@ height = 0.78
 
 [node name="GremlinEnemy" type="CharacterBody3D"]
 collision_layer = 4
-collision_mask = 7
+collision_mask = 3
 script = ExtResource("1")
 move_speed = 4.8
 movement_acceleration = 20.0

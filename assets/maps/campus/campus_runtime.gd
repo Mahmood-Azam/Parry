@@ -84,8 +84,9 @@ func _process(delta: float) -> void:
 		if camera != null:
 			var start := camera.global_position
 			var query := PhysicsRayQueryParameters3D.create(start, start + Vector3.UP * 35.0, 1)
-			outdoor_fog = get_world_3d().direct_space_state.intersect_ray(query).is_empty()
-	var target := 0.009 if outdoor_fog else 0.0015
+			var on_exposed_roof := start.y >= 6.0 and start.x > 39.0 and start.x < 58.0 and start.z > -106.0 and start.z < -72.0
+			outdoor_fog = on_exposed_roof or get_world_3d().direct_space_state.intersect_ray(query).is_empty()
+	var target := 0.025 if outdoor_fog else 0.0015
 	environment.fog_density = lerpf(environment.fog_density, target, 1.0 - exp(-1.8 * delta))
 
 func _batch_static_boxes(bins: Dictionary) -> void:
@@ -127,9 +128,10 @@ func _setup_night() -> void:
 	environment.ambient_light_color = Color(0.30, 0.39, 0.54)
 	environment.ambient_light_energy = 0.38
 	environment.fog_enabled = true
-	environment.fog_light_color = Color(0.035, 0.052, 0.085)
-	environment.fog_light_energy = 0.7
-	environment.fog_density = 0.009
+	environment.fog_light_color = Color(0.19, 0.25, 0.34)
+	environment.fog_light_energy = 0.9
+	environment.fog_sky_affect = 0.4
+	environment.fog_density = 0.025
 	environment.tonemap_mode = Environment.TONE_MAPPER_FILMIC
 	environment.glow_enabled = true
 	environment.glow_intensity = 0.65

@@ -26,8 +26,8 @@ var attack_kind: StringName = &""
 
 func _ready() -> void:
 	awareness.home = global_position
-	awareness.aggro_range = 9.0
-	awareness.leash_range = leash_range
+	awareness.aggro_range = 20.0
+	awareness.leash_range = maxf(leash_range, 30.0)
 	three_hit_combo = false
 	current_health = max_health
 	is_boss = true
@@ -145,7 +145,7 @@ func _can_see_player() -> bool:
 		return false
 	var start := global_position + Vector3.UP * 1.4
 	var end := _get_target_center()
-	if start.distance_to(end) > 9.0 or absf(start.y - end.y) > 2.5:
+	if start.distance_to(end) > awareness.aggro_range or absf(start.y - end.y) > 2.5:
 		return false
 	var query := PhysicsRayQueryParameters3D.create(start, end, 3, [get_rid()])
 	var hit := get_world_3d().direct_space_state.intersect_ray(query)
