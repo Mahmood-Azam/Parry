@@ -10,12 +10,17 @@ var victory_panel: PanelContainer
 var death_request_id: int = 0
 var breach_world: Node3D
 var opening_intro: Node3D
+var ending_intro: Node3D
+var ending_completed := false
 const START_GAME_META := "shadowborn_start_game"
 const BREACH_RESOURCE := "res://breach_world.gd"
 var session_started := false
 var opening_loading := false
 var loading_label: Label
 var breach_script: Script
+var menu_atmosphere: Control
+var menu_theme: Theme
+var title_font: SystemFont
 
 func _ready() -> void:
 	process_mode = Node.PROCESS_MODE_ALWAYS
@@ -38,6 +43,7 @@ func _ready() -> void:
 
 
 func _build_menu() -> void:
+	_build_menu_theme()
 	menu_layer = CanvasLayer.new()
 	menu_layer.name = "FrontEndLayer"
 	menu_layer.layer = 20
@@ -46,7 +52,8 @@ func _build_menu() -> void:
 	overlay = ColorRect.new()
 	overlay.name = "MenuOverlay"
 	overlay.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	overlay.color = Color(0.015, 0.02, 0.045, 0.58)
+	overlay.color = Color(0.008, 0.006, 0.012, 0.12)
+	overlay.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	title_background = TextureRect.new()
 	title_background.name = "ShadowBornTitleArt"
 	title_background.texture = load("res://assets/ui/shadowborn_title_background.png")
@@ -55,21 +62,44 @@ func _build_menu() -> void:
 	title_background.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	title_background.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	menu_layer.add_child(title_background)
+	menu_atmosphere = preload("res://menu_atmosphere.gd").new()
+	title_background.add_child(menu_atmosphere)
 	menu_layer.add_child(overlay)
 
 	home_panel = _make_panel("SHADOWBORN", true)
 	var home_box := home_panel.get_node("Margin/VBox") as VBoxContainer
+	home_panel.add_theme_stylebox_override("panel", StyleBoxEmpty.new())
+	home_panel.set_anchors_preset(Control.PRESET_TOP_LEFT)
+	home_panel.size = Vector2(412, 520)
+	var home_margin := home_panel.get_node("Margin") as MarginContainer
+	for side in ["left", "right", "top", "bottom"]:
+		home_margin.add_theme_constant_override("margin_" + side, 0)
+	home_box.add_theme_constant_override("separation", 13)
+	var kicker := Label.new()
+	kicker.text = "F A S T   /   T H E   S H A D O W   B R E A C H"
+	kicker.add_theme_font_size_override("font_size", 11)
+	kicker.add_theme_color_override("font_color", Color(0.81, 0.58, 0.34))
+	home_box.add_child(kicker)
+	home_box.move_child(kicker, 0)
+	var home_heading := home_box.get_node("PanelHeading") as Label
+	home_heading.add_theme_font_size_override("font_size", 45)
+	home_heading.add_theme_color_override("font_color", Color(0.97, 0.88, 0.70))
 	var lore := Label.new()
-	lore.text = "Parry the darkness. Ignite the blade."
-	lore.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	lore.text = "A blade born of fire. A soul bound to shadow.\nParry the darkness. Ignite the blade."
+	lore.horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT
 	lore.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	lore.add_theme_font_size_override("font_size", 16)
-	lore.add_theme_color_override("font_color", Color(0.78, 0.82, 0.92))
+	lore.add_theme_color_override("font_color", Color(0.72, 0.70, 0.67))
 	home_box.add_child(lore)
 	_add_button(home_box, "NEW GAME", Callable(self, "_new_game"))
 	_add_button(home_box, "CONTINUE", Callable(self, "_continue_game"))
 	_add_button(home_box, "OPTIONS", Callable(self, "_show_options"))
 	_add_button(home_box, "QUIT", Callable(self, "_quit_game"))
+	var promise := Label.new()
+	promise.text = "FIND THE RELICS. REVERSE THE BREACH."
+	promise.add_theme_font_size_override("font_size", 11)
+	promise.add_theme_color_override("font_color", Color(0.57, 0.48, 0.37))
+	home_box.add_child(promise)
 	menu_layer.add_child(home_panel)
 
 	options_panel = _make_panel("OPTIONS", true)
@@ -126,10 +156,10 @@ func _build_menu() -> void:
 	_add_button(death_box, "RESPAWN", Callable(self, "_respawn"))
 	_add_button(death_box, "HOME", Callable(self, "_show_home"))
 	menu_layer.add_child(death_panel)
-	victory_panel = _make_panel("DAWN BREAKS", true)
+	victory_panel = _make_panel("FAST SAVED", true)
 	var victory_box := victory_panel.get_node("Margin/VBox") as VBoxContainer
 	var victory_text := Label.new()
-	victory_text.text = "The Ash Warden has fallen.\nBlock D is free of shadow."
+	victory_text.text = "You saved FAST successfully.\n\nThe meteor has been redirected to NUST."
 	victory_text.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	victory_text.add_theme_font_size_override("font_size", 20)
 	victory_box.add_child(victory_text)
@@ -137,18 +167,94 @@ func _build_menu() -> void:
 	_add_button(victory_box, "NEW GAME", _new_game)
 	_add_button(victory_box, "HOME", _show_home)
 	menu_layer.add_child(victory_panel)
+	_build_menu_details()
+	get_viewport().size_changed.connect(_layout_menu_panels)
+	_layout_menu_panels.call_deferred()
+
+func _build_menu_theme() -> void:
+	menu_theme = Theme.new()
+	var body_font := SystemFont.new()
+	body_font.font_names = PackedStringArray(["Segoe UI", "Arial"])
+	menu_theme.default_font = body_font
+	menu_theme.default_font_size = 16
+	title_font = SystemFont.new()
+	title_font.font_names = PackedStringArray(["Georgia", "Times New Roman"])
+	title_font.font_weight = 700
+	for control in ["Label", "CheckButton", "OptionButton"]:
+		menu_theme.set_color("font_color", control, Color(0.84, 0.81, 0.75))
+	var field := StyleBoxFlat.new()
+	field.bg_color = Color(0.055, 0.039, 0.031, 0.92)
+	field.border_color = Color(0.34, 0.24, 0.15)
+	field.set_border_width_all(1)
+	field.content_margin_left = 12
+	field.content_margin_right = 28
+	field.content_margin_top = 8
+	field.content_margin_bottom = 8
+	menu_theme.set_stylebox("normal", "OptionButton", field)
+	var hover := field.duplicate() as StyleBoxFlat
+	hover.border_color = Color(0.89, 0.48, 0.18)
+	menu_theme.set_stylebox("hover", "OptionButton", hover)
+	menu_theme.set_stylebox("focus", "OptionButton", hover)
+	menu_theme.set_stylebox("pressed", "OptionButton", hover)
+	var slider := StyleBoxFlat.new()
+	slider.bg_color = Color(0.14, 0.10, 0.08)
+	slider.content_margin_top = 3
+	slider.content_margin_bottom = 3
+	menu_theme.set_stylebox("slider", "HSlider", slider)
+	var fill := slider.duplicate() as StyleBoxFlat
+	fill.bg_color = Color(0.77, 0.35, 0.10)
+	menu_theme.set_stylebox("grabber_area", "HSlider", fill)
+	fill = fill.duplicate() as StyleBoxFlat
+	fill.bg_color = Color(1, 0.65, 0.28)
+	menu_theme.set_stylebox("grabber_area_highlight", "HSlider", fill)
+
+func _build_menu_details() -> void:
+	var chapter := Label.new()
+	chapter.name = "MenuChapter"
+	chapter.text = "C H A P T E R   0 1\nTHE SHADOW BREACH"
+	chapter.set_anchors_and_offsets_preset(Control.PRESET_TOP_RIGHT)
+	chapter.position = Vector2(-420, 52)
+	chapter.size = Vector2(356, 48)
+	chapter.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+	chapter.add_theme_font_size_override("font_size", 12)
+	chapter.add_theme_color_override("font_color", Color(0.72, 0.65, 0.54, 0.8))
+	chapter.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	title_background.add_child(chapter)
+	for right in [false, true]:
+		var footer := Label.new()
+		footer.text = "PARRY  /  IGNITE  /  SURVIVE" if not right else "THE FLAME REMEMBERS"
+		footer.set_anchors_and_offsets_preset(Control.PRESET_BOTTOM_RIGHT if right else Control.PRESET_BOTTOM_LEFT)
+		footer.position = Vector2(-420 if right else 64, -48)
+		footer.size = Vector2(356, 24)
+		footer.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT if right else HORIZONTAL_ALIGNMENT_LEFT
+		footer.add_theme_font_size_override("font_size", 11)
+		footer.add_theme_color_override("font_color", Color(0.78, 0.66, 0.49, 0.95))
+		footer.add_theme_color_override("font_outline_color", Color(0.015, 0.009, 0.006, 0.9))
+		footer.add_theme_constant_override("outline_size", 4)
+		footer.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		title_background.add_child(footer)
+
+func _layout_menu_panels() -> void:
+	var viewport := get_viewport().get_visible_rect().size
+	var width := minf(412, viewport.x - 80)
+	home_panel.size.x = width
+	home_panel.size.y = home_panel.get_combined_minimum_size().y
+	home_panel.position = Vector2(64, maxf(42, (viewport.y - home_panel.size.y) * 0.46))
+	options_panel.offset_right = minf(546, viewport.x - 30)
 
 
 func _make_panel(title: String, left_aligned: bool = false) -> PanelContainer:
 	var panel := PanelContainer.new()
+	panel.theme = menu_theme
 	panel.name = title.replace(" ", "") + "Panel"
 	panel.set_anchors_preset(Control.PRESET_CENTER_LEFT if left_aligned else Control.PRESET_CENTER)
 	panel.position = Vector2(46.0, -220.0) if left_aligned else Vector2(-190.0, -220.0)
 	panel.size = Vector2(420.0, 440.0) if left_aligned else Vector2(380.0, 440.0)
 	var style := StyleBoxFlat.new()
-	style.bg_color = Color(0.018, 0.025, 0.045, 0.91)
-	style.border_color = Color(0.88, 0.29, 0.08, 0.88)
-	style.set_border_width_all(2)
+	style.bg_color = Color(0.025, 0.019, 0.018, 0.95)
+	style.border_color = Color(0.48, 0.29, 0.15, 0.80)
+	style.set_border_width_all(1)
+	style.border_width_top = 2
 	style.corner_radius_top_left = 4
 	style.corner_radius_top_right = 4
 	style.corner_radius_bottom_left = 4
@@ -168,36 +274,56 @@ func _make_panel(title: String, left_aligned: bool = false) -> PanelContainer:
 	box.add_theme_constant_override("separation", 16)
 	margin.add_child(box)
 	var heading := Label.new()
+	heading.name = "PanelHeading"
 	heading.text = title
-	heading.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	heading.horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT
+	heading.add_theme_font_override("font", title_font)
 	heading.add_theme_font_size_override("font_size", 32)
-	heading.add_theme_color_override("font_color", Color(1.0, 0.42, 0.12))
+	heading.add_theme_color_override("font_color", Color(0.95, 0.78, 0.53))
 	heading.add_theme_constant_override("shadow_offset_x", 2)
 	heading.add_theme_constant_override("shadow_offset_y", 2)
 	heading.add_theme_color_override("font_shadow_color", Color(0.0, 0.0, 0.0, 0.8))
 	box.add_child(heading)
+	var divider := HSeparator.new()
+	var line := StyleBoxLine.new()
+	line.color = Color(0.62, 0.37, 0.17, 0.6)
+	line.thickness = 1
+	divider.add_theme_stylebox_override("separator", line)
+	box.add_child(divider)
 	return panel
 
 
 func _add_button(parent: VBoxContainer, label: String, callback: Callable) -> void:
 	var button := Button.new()
+	button.name = label.replace(" ", "") + "Button"
 	button.text = label
-	button.custom_minimum_size = Vector2(0.0, 48.0)
-	button.add_theme_font_size_override("font_size", 19)
+	button.custom_minimum_size = Vector2(0.0, 52.0)
+	button.alignment = HORIZONTAL_ALIGNMENT_LEFT
+	button.mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
+	button.add_theme_font_size_override("font_size", 17)
 	button.add_theme_color_override("font_color", Color(0.86, 0.88, 0.94))
 	button.add_theme_color_override("font_hover_color", Color(1.0, 0.74, 0.42))
 	button.add_theme_color_override("font_pressed_color", Color(1.0, 0.42, 0.12))
 	var normal := StyleBoxFlat.new()
-	normal.bg_color = Color(0.06, 0.08, 0.12, 0.72)
-	normal.border_color = Color(0.23, 0.28, 0.38, 0.8)
+	normal.bg_color = Color(0.055, 0.040, 0.032, 0.67)
+	normal.border_color = Color(0.33, 0.24, 0.16, 0.7)
 	normal.set_border_width_all(1)
+	normal.border_width_left = 3
+	normal.content_margin_left = 22
+	normal.content_margin_right = 22
 	normal.corner_radius_top_left = 3
 	normal.corner_radius_top_right = 3
 	normal.corner_radius_bottom_left = 3
 	normal.corner_radius_bottom_right = 3
+	if label == "NEW GAME":
+		normal.bg_color = Color(0.17, 0.065, 0.022, 0.82)
+		normal.border_color = Color(0.73, 0.40, 0.16, 0.86)
+		button.add_theme_color_override("font_color", Color(1.0, 0.83, 0.61))
 	var hover := normal.duplicate() as StyleBoxFlat
-	hover.bg_color = Color(0.30, 0.10, 0.035, 0.82)
-	hover.border_color = Color(1.0, 0.36, 0.10, 0.95)
+	hover.bg_color = Color(0.22, 0.09, 0.028, 0.88)
+	hover.border_color = Color(0.95, 0.51, 0.19, 0.95)
+	hover.shadow_color = Color(1, 0.28, 0.025, 0.16)
+	hover.shadow_size = 9
 	var pressed := hover.duplicate() as StyleBoxFlat
 	pressed.bg_color = Color(0.55, 0.16, 0.04, 0.9)
 	button.add_theme_stylebox_override("normal", normal)
@@ -206,6 +332,30 @@ func _add_button(parent: VBoxContainer, label: String, callback: Callable) -> vo
 	button.add_theme_stylebox_override("focus", hover)
 	button.pressed.connect(callback)
 	parent.add_child(button)
+	var arrow := Label.new()
+	arrow.name = "HoverArrow"
+	arrow.text = "\u203a"
+	arrow.set_anchors_and_offsets_preset(Control.PRESET_CENTER_RIGHT)
+	arrow.position = Vector2(-32, -18)
+	arrow.size = Vector2(18, 36)
+	arrow.add_theme_font_size_override("font_size", 27)
+	arrow.add_theme_color_override("font_color", Color(1, 0.63, 0.26))
+	arrow.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	arrow.modulate.a = 0
+	button.add_child(arrow)
+	var hover_state := {"tween": null}
+	var animate_hover := func(active: bool) -> void:
+		if hover_state.tween != null and hover_state.tween.is_valid():
+			hover_state.tween.kill()
+		var tween := button.create_tween().set_parallel(true)
+		hover_state.tween = tween
+		tween.tween_property(arrow, "modulate:a", 1.0 if active else 0.0, 0.16)
+		tween.tween_property(arrow, "position:x", -28.0 if active else -34.0, 0.16).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
+		menu_atmosphere.hover_heat = 1.0 if active else 0.0
+	button.mouse_entered.connect(animate_hover.bind(true))
+	button.mouse_exited.connect(animate_hover.bind(false))
+	button.focus_entered.connect(animate_hover.bind(true))
+	button.focus_exited.connect(animate_hover.bind(false))
 
 
 func _set_menu_visible(panel: Control) -> void:
@@ -241,6 +391,11 @@ func _show_options() -> void:
 
 func _input(event: InputEvent) -> void:
 	if opening_loading:
+		return
+	if is_instance_valid(ending_intro):
+		if event is InputEventKey and event.pressed and not event.echo and event.keycode in [KEY_ESCAPE, KEY_SPACE, KEY_ENTER]:
+			ending_intro.finish()
+			get_viewport().set_input_as_handled()
 		return
 	if is_instance_valid(opening_intro):
 		if event is InputEventKey and event.pressed and not event.echo and event.keycode in [KEY_ESCAPE, KEY_SPACE, KEY_ENTER]:
@@ -281,7 +436,7 @@ func show_death_screen(delay: float = 0.72) -> void:
 
 
 func _continue_game() -> void:
-	if is_instance_valid(opening_intro) or opening_loading:
+	if is_instance_valid(opening_intro) or is_instance_valid(ending_intro) or opening_loading:
 		return
 	session_started = true
 	_ensure_breach_world()
@@ -294,6 +449,26 @@ func _continue_game() -> void:
 	death_panel.visible = false
 	victory_panel.visible = false
 	Input.set_mouse_mode(Input.MOUSE_MODE_CAPTURED)
+
+func play_ending() -> void:
+	if is_instance_valid(ending_intro) or ending_completed:
+		return
+	_ensure_breach_world()
+	for panel in [home_panel, options_panel, death_panel, victory_panel, title_background, overlay]:
+		panel.hide()
+	get_tree().paused = false
+	ending_intro = preload("res://breach_ending.gd").new()
+	ending_intro.name = "EndingCinematic"
+	ending_intro.player = get_node("Player")
+	ending_intro.world = breach_world
+	ending_intro.finished.connect(_ending_finished)
+	add_child(ending_intro)
+
+func _ending_finished() -> void:
+	ending_intro = null
+	ending_completed = true
+	_set_menu_visible(victory_panel)
+	title_background.hide() # Keep the restored, sunny campus behind the result.
 
 
 func _new_game() -> void:

@@ -19,6 +19,7 @@ var DEATH_SCENE: PackedScene = load("res://assets/enemies/animations/Falling Bac
 @export var default_parry_stun_duration: float = 1.0
 @export var attack_animation_speed_scale: float = 0.88
 @export var max_health: float = 100.0
+@export var health_bar_height: float = 2.2
 @export var show_debug_hitboxes: bool = false ## Enable only when debugging combat ranges.
 @export var death_dissolve_duration: float = 1.35
 @export var is_boss: bool = false
@@ -522,7 +523,7 @@ func _process(_delta: float) -> void:
 	if camera == null:
 		health_bar.visible = false
 		return
-	var screen_position := camera.unproject_position(global_position + Vector3.UP * 2.2)
+	var screen_position := camera.unproject_position(global_position + Vector3.UP * health_bar_height)
 	health_bar.position = screen_position - Vector2(24.0, 2.0)
 	health_bar.visible = not camera.is_position_behind(global_position) and camera.is_position_in_frustum(global_position) and camera.global_position.distance_to(global_position) < 25.0
 

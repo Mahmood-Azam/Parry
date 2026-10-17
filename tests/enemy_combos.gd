@@ -116,7 +116,7 @@ func run() -> void:
 	check(mage.global_position.distance_to(mage.awareness.home) < 0.9 and not mage.is_attacking, "Live mage returns to its territory without casting at distant targets")
 	mage.set_physics_process(false)
 	check(enemy.health_bar.size.x == 48 and enemy.health_bar.size.y == 4, "Enemy health bar is compact")
-	check(player.player_health_bar.size.x == 180 and player.player_health_bar.size.y == 6, "Player has a compact graphical health bar")
+	check(player.player_health_bar.size.x == 244 and player.player_health_bar.size.y == 8, "Player has a compact labeled health bar")
 	# Let transient VFX timers expire, then release the scene before exiting.
 	await create_timer(2.5).timeout
 	scene.queue_free()

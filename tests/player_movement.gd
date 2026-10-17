@@ -154,7 +154,12 @@ func run() -> void:
 	Input.action_press("dash")
 	await ticks(2)
 	Input.action_release("dash")
-	check(player.is_dashing, "Q can retrigger after the shorter cooldown")
+	check(not player.is_dashing, "Q cannot spam another dash before the balanced cooldown expires")
+	await ticks(36)
+	Input.action_press("dash")
+	await ticks(2)
+	Input.action_release("dash")
+	check(player.is_dashing, "Q retriggers once the 1.25 second cooldown has elapsed")
 	await reset_at(Vector3(4, 0.02, 4))
 	player.dash_cooldown_timer = 0.08
 	Input.action_press("dash")

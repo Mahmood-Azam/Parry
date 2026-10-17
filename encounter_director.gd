@@ -7,12 +7,18 @@ const MUTANT := preload("res://assets/enemies/Mutant/mutant_boss.tscn")
 const GREMLIN := preload("res://assets/enemies/gremlin/gremlin_enemy.tscn")
 const OWL := preload("res://assets/npc/owl/owl_companion.gd")
 const BARA_ARRIVAL := preload("res://final_boss_arrival.gd")
+const WAYPOINT := preload("res://objective_waypoint.gd")
 const RELIC_ROOM_PATH := "CampusMap/White Campus Extensions C and D/Block C/Floor 1 central corridor and classrooms/Lecture room C-101"
 const RELIC_LOCAL := Vector3(-3.2, 4.35, -10.0)
 const A_BLOCK_RELIC := Vector3(-0.1, 0.8, -6.2)
 const MUTANT_LOCAL := Vector3(0.5, 3.45, -14.0)
-const GREMLIN_LOCAL := [Vector3(-0.5, 3.45, -17.0), Vector3(1.45, 3.45, -17.5)]
-const MAX_ACTIVE_GREMLINS := 8
+const GREMLIN_SPAWNS := [
+	[Vector3(33, 0.15, -76)],
+	[Vector3(48.3, 0.4, -75.4)],
+	[Vector3(48.45, 0.4, -84.5), Vector3(49.55, 0.4, -90.5)],
+	[Vector3(48.45, 0.4, -97.5), Vector3(49.55, 0.4, -101)],
+	[], # Boss fights are summon-free.
+]
 const PHASE_WARDEN_RELIC := 1
 const PHASE_C101_RELIC := 2
 const PHASE_MUTANT := 3
@@ -47,6 +53,7 @@ var alive: int = 0
 var defeated: Dictionary = {}
 var gates: Array[StaticBody3D] = []
 var marker: Node3D
+var encounter_enemies: Array[CharacterBody3D] = []
 var objective: Label
 var boss_bar: ProgressBar
 var boss_title: Label
@@ -54,8 +61,6 @@ var boss: CharacterBody3D
 var mutant: CharacterBody3D
 var bara: CharacterBody3D
 var arrival: Node3D
-var gremlin_wave_timer: Timer
-var gremlins: Array[CharacterBody3D] = []
 var player: CharacterBody3D
 var ui_clock: float = 0.0
 var relic_phase: int = 0
@@ -131,10 +136,9 @@ func _process(delta: float) -> void:
 	else:
 		pickup_prompt.hide()
 	ui_clock += delta
-	if marker:
-		marker.rotation.y += delta * 0.8
 	if ui_clock > 0.1:
 		ui_clock = 0.0
+		_update_marker_target()
 		_update_hud()
 
 func _input(event: InputEvent) -> void:
@@ -178,13 +182,13 @@ func _start_encounter() -> void:
 	if stage == STAGES.size() - 1:
 		_build_gate(stage) # Seal the rear doorway only after entering the boss court.
 	defeated.clear()
-	alive = STAGES[stage].spawns.size()
-	if marker:
-		marker.queue_free()
-		marker = null
-	for index in alive:
+	var base_count: int = STAGES[stage].spawns.size()
+	alive = base_count + GREMLIN_SPAWNS[stage].size()
+	_clear_marker()
+	encounter_enemies.clear()
+	for index in base_count:
 		# One ranged caster supports each group; the final encounter retains its boss.
-		var is_mage := stage < STAGES.size() - 1 and index == alive - 1
+		var is_mage := stage < STAGES.size() - 1 and index == base_count - 1
 		var enemy := (MAGE if is_mage else ENEMY).instantiate() as CharacterBody3D
 		enemy.name = "Encounter%d_Shadow%d" % [stage + 1, index + 1]
 		enemy.position = STAGES[stage].spawns[index]
@@ -213,8 +217,20 @@ func _start_encounter() -> void:
 		# Enemies remain siblings of Player, preserving the existing target path.
 		enemy.died.connect(_enemy_defeated.bind(enemy.get_instance_id()))
 		get_parent().add_child(enemy)
+		encounter_enemies.append(enemy)
 		if enemy.is_boss:
 			enemy.health_bar.hide()
+	for index in GREMLIN_SPAWNS[stage].size():
+		var gremlin := GREMLIN.instantiate() as CharacterBody3D
+		gremlin.name = "Encounter%d_Gremlin%d" % [stage + 1, index + 1]
+		gremlin.position = GREMLIN_SPAWNS[stage][index]
+		gremlin.attack_timer = 0.8 + float(index) * 0.35
+		gremlin.process_mode = Node.PROCESS_MODE_PAUSABLE
+		gremlin.died.connect(_enemy_defeated.bind(gremlin.get_instance_id()))
+		get_parent().add_child(gremlin)
+		encounter_enemies.append(gremlin)
+	_set_marker(STAGES[stage].trigger, "CLEAR " + STAGES[stage].name.trim_prefix("THE "))
+	_update_marker_target()
 	_update_hud()
 
 func _enemy_defeated(identity: int) -> void:
@@ -383,9 +399,10 @@ func _place_relic_at(world_position: Vector3, relic_name: String, marker_text: S
 	halo.omni_range = 3.0
 	halo.shadow_enabled = false
 	relic.add_child(halo)
-	if marker:
-		marker.queue_free()
-	_set_marker(relic.global_position - Vector3.UP * 0.8, marker_text)
+	_clear_marker()
+	# The C-101 search is intentionally unguided: no floor or screen marker.
+	if relic_name != "C101Relic":
+		_set_marker(relic.global_position - Vector3.UP * 0.8, marker_text)
 
 func _collect_relic() -> void:
 	if not is_instance_valid(relic):
@@ -394,9 +411,7 @@ func _collect_relic() -> void:
 	relic.queue_free()
 	relic = null
 	pickup_prompt.hide()
-	if marker:
-		marker.queue_free()
-		marker = null
+	_clear_marker()
 	relic_count += 1
 	message_label.text = "%d/3 relics collected" % relic_count
 	message_label.show()
@@ -412,6 +427,7 @@ func _collect_relic() -> void:
 		owl.call("start_story", player, SECOND_OWL_LINES, SECOND_OWL_DURATIONS)
 	elif collected_phase == PHASE_A_RELIC:
 		relic_phase = PHASE_PORTAL
+		_set_marker(get_parent().get_node("ShadowBreach").gate_point, "D BLOCK ROOF - PORTAL")
 		_ensure_owl()
 		owl.call("start_story", player, THIRD_OWL_LINES, THIRD_OWL_DURATIONS)
 	_update_hud()
@@ -461,36 +477,11 @@ func _place_mutant() -> void:
 	mutant.engaged_player.connect(_update_hud)
 	get_parent().add_child(mutant)
 	mutant.health_bar.hide()
-	gremlin_wave_timer = Timer.new()
-	gremlin_wave_timer.wait_time = 10.0
-	gremlin_wave_timer.timeout.connect(_spawn_gremlin_wave)
-	add_child(gremlin_wave_timer)
-	gremlin_wave_timer.start()
-
-func _spawn_gremlin_wave() -> void:
-	if relic_phase != PHASE_MUTANT or not player.is_alive or not is_instance_valid(mutant) or mutant.is_dead:
-		return
-	gremlins = gremlins.filter(func(enemy: CharacterBody3D) -> bool: return is_instance_valid(enemy) and not enemy.is_dead)
-	var room := get_parent().get_node(RELIC_ROOM_PATH) as Node3D
-	for local_position in GREMLIN_LOCAL:
-		if gremlins.size() >= MAX_ACTIVE_GREMLINS:
-			break
-		var gremlin := GREMLIN.instantiate() as CharacterBody3D
-		gremlin.name = "MutantGremlin%d" % gremlins.size()
-		gremlin.position = room.to_global(local_position)
-		gremlin.process_mode = Node.PROCESS_MODE_DISABLED if player.is_using_ultimate else Node.PROCESS_MODE_PAUSABLE
-		get_parent().add_child(gremlin)
-		gremlins.append(gremlin)
+	_set_marker(mutant.global_position, "DEFEAT THE MUTANT")
 
 func _mutant_defeated() -> void:
 	if relic_phase != PHASE_MUTANT:
 		return
-	if is_instance_valid(gremlin_wave_timer):
-		gremlin_wave_timer.stop()
-	for gremlin in gremlins:
-		if is_instance_valid(gremlin):
-			gremlin.queue_free()
-	gremlins.clear()
 	relic_phase = PHASE_A_RELIC
 	boss_bar.hide()
 	boss_title.hide()
@@ -507,6 +498,7 @@ func _insert_relics() -> void:
 	if relic_phase != PHASE_PORTAL or relic_count != 3:
 		return
 	relic_phase = PHASE_FINAL_BOSS
+	_clear_marker()
 	pickup_prompt.hide()
 	message_label.text = "THE THREE RELICS OPEN THE PORTAL"
 	message_label.show()
@@ -521,6 +513,7 @@ func _insert_relics() -> void:
 	_update_hud()
 
 func _bara_landed(_actor: CharacterBody3D) -> void:
+	_set_marker(_actor.global_position, "BARA USTAAD")
 	message_label.text = "BARA USTAAD"
 	message_label.show()
 	_hide_message_after(2.5, message_label.text)
@@ -531,6 +524,7 @@ func _bara_defeated() -> void:
 		return
 	relic_phase = PHASE_COMPLETE
 	completed = true
+	_clear_marker()
 	boss_bar.hide()
 	boss_title.hide()
 	message_label.text = "BARA USTAAD HAS FALLEN"
@@ -539,11 +533,11 @@ func _bara_defeated() -> void:
 	_finish_portal()
 
 func _finish_portal() -> void:
-	var world := get_parent().get_node_or_null("ShadowBreach")
-	if is_instance_valid(world):
-		await world.restore_campus(2.5)
+	# A killing ultimate still owns its camera/actor snapshots until it ends.
+	if player.is_using_ultimate:
+		await player.ultimate_controller.ultimate_finished
 	if is_inside_tree() and is_instance_valid(player) and player.is_alive:
-		get_parent().show_victory()
+		get_parent().play_ending.call_deferred()
 
 func _emissive(color: Color, energy: float) -> StandardMaterial3D:
 	var material := StandardMaterial3D.new()
@@ -580,21 +574,42 @@ func _build_gate(index: int) -> void:
 	gates.append(gate)
 
 func _set_marker(marker_position: Vector3 = Vector3.ZERO, marker_text: String = "") -> void:
-	marker = Node3D.new()
+	_clear_marker()
+	if relic_phase == PHASE_C101_RELIC or completed:
+		return
+	marker = WAYPOINT.new()
+	marker.name = "ObjectiveWaypoint"
+	marker.player = player
+	marker.caption = STAGES[stage].name if marker_text.is_empty() else marker_text
+	marker.tint = Color(0.43, 0.88, 1.0) if is_instance_valid(relic) else Color(1.0, 0.65, 0.23)
 	marker.position = (STAGES[stage].trigger + Vector3.UP * 0.12) if marker_text.is_empty() else marker_position
 	add_child(marker)
-	var ring := MeshInstance3D.new()
-	var torus := TorusMesh.new()
-	torus.inner_radius = 0.55
-	torus.outer_radius = 0.65
-	ring.mesh = torus
-	ring.material_override = _emissive(Color(1.0, 0.40, 0.07), 3.0)
-	marker.add_child(ring)
-	var label := Label3D.new()
-	label.text = STAGES[stage].name if marker_text.is_empty() else marker_text
-	label.position.y = 1.7
-	label.billboard = BaseMaterial3D.BILLBOARD_ENABLED
-	label.font_size = 32
-	label.modulate = Color(1.0, 0.63, 0.26)
-	label.visibility_range_end = 30.0
-	marker.add_child(label)
+
+func _clear_marker() -> void:
+	if is_instance_valid(marker):
+		# Hide synchronously so a collected relic never leaves a stale HUD pointer.
+		marker.canvas.hide()
+		marker.hide()
+		marker.set_process(false)
+		marker.queue_free()
+	marker = null
+
+func _update_marker_target() -> void:
+	if not is_instance_valid(marker):
+		return
+	var target: CharacterBody3D = null
+	if active and relic_phase == 0:
+		var closest := INF
+		for enemy in encounter_enemies:
+			if not is_instance_valid(enemy) or enemy.is_dead:
+				continue
+			var distance := player.global_position.distance_squared_to(enemy.global_position)
+			if distance < closest:
+				closest = distance
+				target = enemy
+	elif relic_phase == PHASE_MUTANT:
+		target = mutant
+	elif relic_phase == PHASE_FINAL_BOSS:
+		target = bara
+	if is_instance_valid(target) and not target.is_dead:
+		marker.global_position = target.global_position + Vector3.UP * 0.12

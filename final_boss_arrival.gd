@@ -59,11 +59,12 @@ func _process(delta: float) -> void:
 		return
 	shot_time += delta
 	shake_time = maxf(shake_time - delta, 0.0)
-	var destination := LANDING + Vector3(5.0, 3.3, 6.8)
+	# Approach from the side so the portal cannot hide the giant's silhouette.
+	var destination := LANDING + Vector3(13.0, 7.0, -4.0)
 	shot_camera.global_position = shot_camera.global_position.lerp(destination, minf(delta * 2.6, 1.0))
 	if shake_time > 0.0:
 		shot_camera.global_position += Vector3(randf_range(-0.10, 0.10), randf_range(-0.08, 0.08), 0) * (shake_time / 0.55)
-	shot_camera.look_at(LANDING + Vector3.UP * 1.8)
+	shot_camera.look_at(LANDING + Vector3.UP * 4.2)
 
 func _play_arrival() -> void:
 	await get_tree().create_timer(0.35, false).timeout

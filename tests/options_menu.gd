@@ -32,7 +32,7 @@ func run() -> void:
 	check(controls != null and "Ctrl Crouch" in controls.text and "Q Shadow Dash" in controls.text and "F11" in controls.text, "Controls reference is complete inside Options")
 	var player: Node = scene.get_node("Player")
 	player._update_combat_stats()
-	check(player.combat_stats_label == null and player.fill_fire_button == null and player.player_health_bar != null, "Gameplay HUD has bars only, with no stats text or debug button")
+	check(player.combat_stats_label == null and player.fill_fire_button == null and player.status_hud.health_label != null, "Gameplay HUD has labeled essentials without the old debug readout or fill button")
 	var slider := scene.options_panel.find_child("MasterVolume", true, false) as HSlider
 	check(slider != null and slider.min_value == 0 and slider.max_value == 100, "Options has a 0–100 master volume slider")
 	slider.value = 37

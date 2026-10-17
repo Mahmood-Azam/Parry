@@ -20,9 +20,9 @@ func run() -> void:
 	scene._begin_opening()
 	var movie: Node3D = scene.opening_intro
 	movie.set_process(false)
-	movie.elapsed = 5.8
+	movie.elapsed = 6.3
 	movie._update_timeline(1.0 / 60.0)
-	check(movie.arrivals.size() == 2, "Rooftop portal emits the first melee/mage group")
+	check(movie.arrivals.size() == 3, "Rooftop portal emits the first skeleton/mage/gremlin group")
 	check(scene.breach_world.gate.global_position.y > 6.0, "Portal remains on the surviving roof slab")
 	var identities: Array[int] = []
 	for state in movie.arrivals:
@@ -42,8 +42,8 @@ func run() -> void:
 	Input.parse_input_event(input)
 	await process_frame
 	check(not is_instance_valid(scene.opening_intro) and not paused, "Escape skips safely in the middle of enemy emergence")
-	check(scene.get_node("EncounterDirector").active and scene.get_node("EncounterDirector").alive == 2, "Encounter accounting survives mid-arrival skip")
-	check(get_nodes_in_group("enemy").size() == 2, "Skipping cannot duplicate the first wave")
+	check(scene.get_node("EncounterDirector").active and scene.get_node("EncounterDirector").alive == 3, "Encounter accounting survives mid-arrival skip")
+	check(get_nodes_in_group("enemy").size() == 3 and get_nodes_in_group("gremlin").size() == 1, "Skipping cannot duplicate the first wave")
 	for actor: CharacterBody3D in get_nodes_in_group("enemy"):
 		check(actor.get_instance_id() in identities and actor.global_position.y < 1.0, "Same emitted enemy is placed safely in the courtyard")
 		check(actor.process_mode == Node.PROCESS_MODE_PAUSABLE and actor.collision_layer == 4 and actor.collision_mask == 7, "Skipped arrival restores AI and collision masks")

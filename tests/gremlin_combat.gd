@@ -32,6 +32,9 @@ func run() -> void:
 	scene.add_child(gremlin)
 	assert(gremlin.player_target == player)
 	assert(gremlin.is_in_group("enemy"))
+	assert(gremlin.is_in_group("gremlin") and gremlin.max_health == 24.0, "Gremlins are fragile mixed-wave enemies")
+	assert(gremlin.move_speed == 4.8 and gremlin.movement_acceleration >= 20.0, "Gremlins close distance quickly")
+	assert(is_equal_approx(gremlin.health_bar_height, 1.05), "Small gremlin health bars stay close to their heads")
 	for clip in [&"Lesha_idle", &"Lesha_walk", &"Lesha_attack_1"]:
 		assert(gremlin.animation_player.has_animation(clip), "Gremlin animation missing: " + clip)
 	var body := gremlin.get_node("SkeletonModel/GremlinModel/Dokkeabi/Skeleton3D/SM_Dokkeabi") as MeshInstance3D
@@ -41,6 +44,7 @@ func run() -> void:
 	await create_timer(0.4).timeout
 	assert(gremlin.global_position.z > -4.0, "Gremlin must pursue the player")
 	assert(gremlin.current_animation == &"Lesha_walk", "Pursuit must play the walk cycle")
+	assert(is_equal_approx(gremlin.animation_player.speed_scale, 1.5), "Quick movement has a matching scurry cadence")
 
 	gremlin.set_physics_process(false)
 	gremlin.global_position = Vector3(0, 0, -1.4)
@@ -71,7 +75,9 @@ func run() -> void:
 	assert(is_equal_approx(player.current_health, player.max_health - gremlin.attack_damage), "Club strike must damage the player")
 	gremlin._process_attack_hit()
 	assert(is_equal_approx(player.current_health, player.max_health - gremlin.attack_damage), "A swing must only hit once")
-	gremlin.take_damage(100.0, player)
+	gremlin.take_damage(18.0, player)
+	assert(not gremlin.is_dead and gremlin.current_health == 6.0, "One full-fire basic hit leaves a gremlin almost dead")
+	gremlin.take_damage(18.0, player)
 	assert(gremlin.is_dead, "Gremlins must be killable")
 	print("PASS gremlin textures, walk, club parry, attack damage and death")
 	for sound in scene.find_children("*", "AudioStreamPlayer", true, false):

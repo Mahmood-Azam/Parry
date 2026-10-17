@@ -116,8 +116,9 @@ var FIRE_AIR_SLASH_SCRIPT: Script = preload("res://fire_air_slash.gd")
 @export_group("Shadow Dash")
 @export var dash_speed: float = 19.0
 @export var dash_duration: float = 0.28
-@export var dash_cooldown: float = 0.55
-@export var dash_invulnerability_time: float = 0.22
+@export var dash_cooldown: float = 1.25
+@export var dash_invulnerability_time: float = 0.16
+@export var shadow_decoy_duration: float = 1.0
 @export var dash_buffer_time: float = 0.12
 
 # --- Node References ---
@@ -143,6 +144,7 @@ var is_parrying: bool = false
 var parry_timer: float = 0.0
 var parry_cooldown_timer: float = 0.0
 var player_health_bar: ProgressBar
+var status_hud: Panel
 var parry_chain_count: int = 0
 
 var is_dashing: bool = false
@@ -172,6 +174,8 @@ var fill_fire_button: Button
 var parry_flash: ColorRect
 var hit_flash: ColorRect
 var parry_sound: AudioStreamPlayer
+var sword_swing_sound: AudioStreamPlayer
+var attack_phase_sound := 0
 var parry_debug_ring: MeshInstance3D
 var parry_debug_material: StandardMaterial3D
 var parry_audio_stream: AudioStream = preload("res://assets/audio/Parry.mp3")
@@ -254,6 +258,7 @@ func _ready() -> void:
 	_setup_parry_hitbox()
 	_setup_combat_feedback()
 	_setup_parry_audio()
+	_setup_sword_audio()
 	_setup_combat_stats()
 	ultimate_controller = ULTIMATE_SCRIPT.new()
 	ultimate_controller.name = "UltimateController"
@@ -376,6 +381,32 @@ func _setup_parry_audio() -> void:
 	parry_sound.volume_db = 0.0
 	add_child(parry_sound)
 
+func _setup_sword_audio() -> void:
+	sword_swing_sound = AudioStreamPlayer.new()
+	sword_swing_sound.name = "SwordSwingSound"
+	sword_swing_sound.stream = preload("res://assets/audio/sword_attack.wav")
+	sword_swing_sound.bus = &"Master"
+	sword_swing_sound.volume_db = 3.0
+	sword_swing_sound.max_polyphony = 3
+	add_child(sword_swing_sound)
+
+func _play_sword_swing() -> void:
+	# A little variation keeps the supplied single sample from sounding mechanical.
+	sword_swing_sound.pitch_scale = 1.0 + maxf(attack_combo_phase - 1, 0) * 0.025 + randf_range(-0.035, 0.035)
+	sword_swing_sound.play()
+
+func _update_sword_audio() -> void:
+	if not attacking or attack_combo_phase <= 0 or attack_phase_sound == attack_combo_phase:
+		return
+	if animation_player.current_animation != &"Attack":
+		return
+	var phase_duration := _attack_combo_phase_duration()
+	# Swish leads blade contact, independently of fire, damage and hit detection.
+	var sound_time := phase_duration * (float(attack_combo_phase - 1) + 0.28)
+	if animation_player.current_animation_position >= sound_time:
+		attack_phase_sound = attack_combo_phase
+		_play_sword_swing()
+
 
 func _setup_parry_hitbox() -> void:
 	if parry_hitbox == null:
@@ -439,28 +470,17 @@ func _setup_combat_stats() -> void:
 	var layer := get_node_or_null("CombatFeedbackLayer") as CanvasLayer
 	if layer == null:
 		return
-	player_health_bar = preload("res://combat_health_bar.gd").new()
-	player_health_bar.name = "PlayerHealth"
-	player_health_bar.bar_height = 6.0
-	player_health_bar.position = Vector2(24, 24)
-	player_health_bar.size = Vector2(180, 6)
-	player_health_bar.max_value = max_health
-	player_health_bar.value = current_health
-	layer.add_child(player_health_bar)
-	fire_meter_bar = preload("res://layered_fire_meter.gd").new()
-	fire_meter_bar.name = "FireMeter"
-	fire_meter_bar.position = Vector2(24, 38)
-	fire_meter_bar.size = Vector2(180, 10)
-	layer.add_child(fire_meter_bar)
+	status_hud = preload("res://player_status_hud.gd").new()
+	status_hud.controller = self
+	layer.add_child(status_hud)
+	player_health_bar = status_hud.health_bar
+	fire_meter_bar = status_hud.fire_bar
 	_update_combat_stats()
 
 
 func _update_combat_stats() -> void:
-	if player_health_bar != null:
-		player_health_bar.max_value = max_health
-		player_health_bar.value = current_health
-	if fire_meter_bar != null:
-		fire_meter_bar.set_reserve(fire_meter, fire_meter_max, is_using_ultimate)
+	if status_hud != null:
+		status_hud.refresh()
 
 
 # Feedback is communicated by hit flashes, sparks, audio and animation, not text.
@@ -952,6 +972,7 @@ func _physics_process(delta: float) -> void:
 	if attacking:
 		if attack_pressed and attack_combo_phase > 0:
 			_advance_attack_combo()
+		_update_sword_audio()
 		_update_player_attack_hit()
 		_update_attack_combo(delta)
 		_reset_locomotion_pose(delta)
@@ -1179,6 +1200,7 @@ func _begin_attack(animation_name: String) -> void:
 		return
 	attacking = true
 	is_attacking = true
+	attack_phase_sound = 0
 	animation_player.speed_scale = 1.0
 	if animation_name == "Attack":
 		attack_combo_phase = 1
@@ -1193,6 +1215,8 @@ func _begin_attack(animation_name: String) -> void:
 	_play(animation_name)
 	if animation_name == "Attack":
 		animation_player.seek(0.0, true)
+	elif animation_name == "JumpAttack":
+		_play_sword_swing()
 	emit_signal("attack_pressed")
 
 
@@ -1305,6 +1329,7 @@ func _finish_attack(animation_name: StringName) -> void:
 	attack_combo_queued = false
 	attack_phase_hit = 0
 	animation_player.speed_scale = 1.0
+	attack_phase_sound = 0
 	last_animation = ""
 	_play("Block" if blocking else "Idle")
 
@@ -1616,6 +1641,7 @@ func _spawn_shadow_decoy() -> void:
 	decoy.name = "ShadowDecoy"
 	decoy.set_script(shadow_decoy_script)
 	decoy.source_character = character
+	decoy.lifetime = shadow_decoy_duration
 	get_tree().current_scene.add_child(decoy)
 	decoy.global_position = global_position
 	decoy.global_rotation = character.global_rotation

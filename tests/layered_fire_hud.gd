@@ -93,10 +93,12 @@ func run() -> void:
 	for i in 3:
 		await process_frame
 	for label in scene.find_children("*", "Label", true, false):
-		if scene.menu_layer.is_ancestor_of(label):
+		if scene.menu_layer.is_ancestor_of(label) or player.status_hud.is_ancestor_of(label) or label.name in [&"BossTitle", &"RelicPickupPrompt", &"EncounterMessage"]:
 			continue
 		check(label.self_modulate.a == 0 or not label.is_visible_in_tree(), "Gameplay text remains suppressed: " + str(label.name))
 	for label: Label3D in scene.find_children("*", "Label3D", true, false):
+		if scene.get_node("CampusMap").is_ancestor_of(label):
+			continue
 		check(label.transparency == 1.0, "World text suppressed: " + str(label.name))
 	check(skeleton.health_bar.size == Vector2(48, 4), "Skeleton overhead bar is 48 by 4")
 	await capture("clean_gameplay")

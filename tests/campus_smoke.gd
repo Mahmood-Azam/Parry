@@ -28,8 +28,9 @@ func run() -> void:
 	# The updated starting position is farther from the first wave.
 	if not director.active:
 		director._start_encounter()
-	assert(director.active and director.alive == 2)
+	assert(director.active and director.alive == 3)
 	assert(get_nodes_in_group("mage").size() == 1)
+	assert(get_nodes_in_group("gremlin").size() == 1)
 	await capture("night_courtyard")
 	for stage in range(5):
 		if stage > 0:
@@ -37,6 +38,18 @@ func run() -> void:
 			await create_timer(0.25).timeout
 		print("STAGE ",stage," active=",director.active," alive=",director.alive)
 		assert(director.stage == stage and director.active)
+		var wave_gremlins: Array = director.encounter_enemies.filter(func(enemy): return enemy.is_in_group("gremlin"))
+		assert(wave_gremlins.size() == director.GREMLIN_SPAWNS[stage].size())
+		for gremlin in wave_gremlins:
+			assert(gremlin.max_health == 24.0 and gremlin.move_speed >= 4.8)
+			var collider: CollisionShape3D = gremlin.get_node("CollisionShape3D")
+			var clearance := PhysicsShapeQueryParameters3D.new()
+			clearance.shape = collider.shape
+			clearance.transform = collider.global_transform
+			clearance.transform.origin += Vector3.UP * 0.05
+			clearance.collision_mask = 1
+			clearance.margin = 0.001
+			assert(scene.get_world_3d().direct_space_state.intersect_shape(clearance, 1).is_empty(), "Gremlin spawn must not be embedded in campus walls")
 		for enemy in get_nodes_in_group("enemy"):
 			enemy.set_physics_process(false)
 		if stage == 1:
@@ -58,13 +71,19 @@ func run() -> void:
 			assert(director.boss.skeleton_model.rotation.is_equal_approx(resting_rotation), "Ash Warden must return to its upright pose")
 			await capture("night_boss")
 			player.is_using_ultimate = true
-		for enemy in get_nodes_in_group("enemy"):
-			enemy.take_damage(99999.0, player)
+		for enemy in director.encounter_enemies:
+			if not enemy.is_in_group("gremlin"):
+				enemy.take_damage(99999.0, player)
+		if not wave_gremlins.is_empty():
+			assert(director.active and director.alive == wave_gremlins.size(), "Clearing skeletons/mage alone cannot unlock the next wave")
+			for gremlin in wave_gremlins:
+				gremlin.take_damage(99999.0, player)
 		await create_timer(0.8).timeout
 		print("CLEARED ",stage," next=",director.stage," completed=",director.completed)
 	assert(not director.completed)
 	assert(director.relic_phase == 1)
 	assert(director.relic_count == 0 and director.relic.name == "WardenRelic")
+	assert(is_instance_valid(director.marker) and director.marker.caption == "ASH WARDEN RELIC")
 	assert(director.owl.get("state") == "hidden", "Owl must wait for an active ultimate to finish")
 	player.is_using_ultimate = false
 	player.ultimate_controller.ultimate_finished.emit("focused")
@@ -103,6 +122,9 @@ func run() -> void:
 	director._input(collect_key)
 	assert(director.relic_phase == director.PHASE_C101_RELIC and director.relic_count == 1)
 	assert(director.relic.name == "C101Relic")
+	assert(not is_instance_valid(director.marker), "C-101 must remain an unguided search")
+	director._set_marker(director.relic.global_position, "SHOULD NOT APPEAR")
+	assert(not is_instance_valid(director.marker), "C-101 phase cannot accidentally reveal a destination")
 	player.global_position = director.relic.global_position + Vector3.DOWN * 0.8
 	director._input(collect_key)
 	assert(director.relic_phase == director.PHASE_MUTANT and director.relic_count == 2)
@@ -111,6 +133,7 @@ func run() -> void:
 	director.owl.call("_process", 4.5)
 	director.owl.call("_process", 0.65)
 	assert(is_instance_valid(director.mutant))
+	assert(is_instance_valid(director.marker) and director.marker.caption == "DEFEAT THE MUTANT")
 	assert(director.mutant.max_health == director.boss.max_health * 1.5)
 	assert(not director.mutant.engaged and not director.boss_bar.visible)
 	assert(director.mutant.animation_player.has_animation("Death"))
@@ -120,13 +143,8 @@ func run() -> void:
 	assert(director.mutant.animation_player.has_animation("Punch"))
 	assert(director.mutant.animation_player.has_animation("Walk"))
 	assert(director.mutant.global_position.is_equal_approx(director.get_parent().get_node(director.RELIC_ROOM_PATH).to_global(director.MUTANT_LOCAL)))
-	assert(is_equal_approx(director.gremlin_wave_timer.wait_time, 10.0) and not director.gremlin_wave_timer.is_stopped())
-	assert(director.gremlins.is_empty(), "Gremlins should first arrive ten seconds after the Mutant")
-	director._spawn_gremlin_wave()
-	assert(director.gremlins.size() == 2)
-	for gremlin in director.gremlins:
-		assert(gremlin.is_in_group("enemy") and gremlin.animation_player.has_animation("Lesha_attack_1"))
-		gremlin.set_physics_process(false)
+	assert(not director.has_method("_spawn_gremlin_wave"), "Mutant no longer has a gremlin summoning path")
+	assert(director.find_children("*", "Timer", true, false).is_empty(), "No repeating summon timer remains")
 	# Check the actual new hallway scene, with room-space placement intact.
 	director.mutant.engaged = true
 	director.mutant.set_physics_process(false)
@@ -151,15 +169,16 @@ func run() -> void:
 	director.mutant.take_damage(999999.0, player)
 	assert(not director.completed and director.relic_phase == director.PHASE_A_RELIC)
 	assert(director.relic.name == "ABlockRelic" and director.relic.global_position.distance_to(director.A_BLOCK_RELIC) < 0.3)
+	assert(is_instance_valid(director.marker) and director.marker.caption == "A BLOCK ENTRANCE")
 	var a_point: Vector3 = director.A_BLOCK_RELIC
 	var a_ray := PhysicsRayQueryParameters3D.create(a_point + Vector3.UP * 3.0, a_point + Vector3.DOWN * 2.0, 1)
 	var a_ground := scene.get_world_3d().direct_space_state.intersect_ray(a_ray)
 	assert(not a_ground.is_empty() and absf(a_ground.position.y - a_point.y) < 1.2, "A-block relic must be over walkable ground")
-	assert(director.gremlin_wave_timer.is_stopped() and director.gremlins.is_empty())
 	assert(director.mutant.animation_player.current_animation == "Death")
 	player.global_position = director.relic.global_position + Vector3.DOWN * 0.8
 	director._input(collect_key)
 	assert(director.relic_count == 3 and director.relic_phase == director.PHASE_PORTAL)
+	assert(is_instance_valid(director.marker) and director.marker.global_position.distance_to(scene.breach_world.gate_point) < 0.01)
 	director.owl.call("_process", 2.8)
 	director.owl.call("_process", 5.0)
 	director.owl.call("_process", 0.65)
@@ -175,6 +194,7 @@ func run() -> void:
 	assert(director.bara.animation_player.current_animation == "Idle", "Bara Ustaad must spawn in an idle pose")
 	await create_timer(3.2, false).timeout
 	assert(director.bara.engaged and director.bara.process_mode == Node.PROCESS_MODE_PAUSABLE)
+	assert(is_instance_valid(director.marker) and director.marker.caption == "BARA USTAAD")
 	assert(director.bara.awareness.home.distance_to(Vector3(48.2, 6.55, -85.3)) < 0.1, "Bara Ustaad territory must start on the roof")
 	var boss_attacks := [0]
 	director.bara.animation_player.animation_started.connect(func(clip: StringName) -> void:
@@ -186,7 +206,8 @@ func run() -> void:
 	assert(boss_attacks[0] >= 2, "Bara Ustaad must continue attacking after the arrival")
 	director.bara.take_damage(999999.0, player)
 	assert(director.completed and director.relic_phase == director.PHASE_COMPLETE)
-	await create_timer(5.1, true).timeout
+	assert(not is_instance_valid(director.marker), "Final victory removes the navigation marker")
+	await create_timer(16.0, true).timeout
 	assert(not scene.breach_world.gate.visible, "The portal must close after Bara Ustaad falls")
 	assert(scene.victory_panel.visible and paused, "The final fight must lead to the victory screen")
 	var daylight: WorldEnvironment = scene.get_node("CampusMap").find_children("*", "WorldEnvironment", true, false)[0]

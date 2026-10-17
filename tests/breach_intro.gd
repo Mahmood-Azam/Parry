@@ -29,7 +29,8 @@ func run() -> void:
 	scene = load("res://main.tscn").instantiate()
 	root.add_child(scene)
 	current_scene = scene
-	for i in 4:
+	# New Game loads the cinematic in the background; do not race a fixed frame count.
+	while not is_instance_valid(scene.opening_intro):
 		await process_frame
 	movie = scene.opening_intro
 	check(is_instance_valid(movie), "New Game starts the opening cinematic")
@@ -57,10 +58,14 @@ func run() -> void:
 	await capture("03_impact")
 	await until(5.7)
 	check(scene.breach_world.gate.visible and scene.breach_world.gate.scale.x > 0.9, "Imported gate opens on campus")
-	check(movie.arrivals.size() == 2 and scene.get_node("EncounterDirector").alive == 2, "Actual first encounter emerges from the portal")
+	check(movie.arrivals.size() == 3 and scene.get_node("EncounterDirector").alive == 3, "Actual mixed first encounter emerges from the portal")
 	for state in movie.arrivals:
 		var actor: CharacterBody3D = state.actor.get_ref()
-		check(actor.global_position.y > 6.0 and actor.process_mode == Node.PROCESS_MODE_DISABLED, "Emerging enemy is visibly on the rooftop with AI suspended")
+		check(actor.process_mode == Node.PROCESS_MODE_DISABLED, "Arrival enemy AI is suspended")
+		if movie.elapsed >= state.start:
+			check(actor.global_position.y > 6.0, "Emerging enemy is visibly on the rooftop")
+		else:
+			check(not actor.visible, "Later arrivals stay hidden until their portal cue")
 		check(actor.collision_layer == 0 and actor.collision_mask == 0, "Arrival animation cannot damage or collide with player")
 	await capture("04_portal")
 	await until(6.2)
@@ -81,7 +86,7 @@ func run() -> void:
 	check(player.camera.current and player.get_node("CombatFeedbackLayer").visible, "Gameplay camera and HUD are restored")
 	check(scene.breach_world.gate.visible and scene.breach_world.meteor.visible, "Gate and meteor remain in the playable map")
 	check(scene.breach_world.destruction.destroyed, "Building destruction persists into gameplay")
-	check(scene.get_node("EncounterDirector").alive == 2 and get_nodes_in_group("enemy").size() == 2, "Cinematic wave becomes gameplay wave without duplicate spawns")
+	check(scene.get_node("EncounterDirector").alive == 3 and get_nodes_in_group("enemy").size() == 3, "Cinematic wave becomes gameplay wave without duplicate spawns")
 	for actor: CharacterBody3D in get_nodes_in_group("enemy"):
 		check(actor.process_mode == Node.PROCESS_MODE_PAUSABLE and actor.collision_layer == 4 and actor.collision_mask == 7, "Arrived enemy regains normal combat and collisions")
 		check(actor.global_position.y < 1.0, "Enemy arrives in courtyard instead of remaining stranded on roof")

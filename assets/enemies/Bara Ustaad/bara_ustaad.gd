@@ -15,16 +15,36 @@ const BARA_CLIPS := {
 }
 const ATTACKS: Array[StringName] = [&"AttackHorizontal", &"AttackDownward", &"AttackKick"]
 const REACTIONS: Array[StringName] = [&"HitLeft", &"HitRight", &"HitGut"]
+const TARGET_HEIGHT := 8.6 # The portal spans 8 m; its defender is slightly taller.
 
 var hit_reacting := false
 var last_attack: StringName = &""
 
 func _ready() -> void:
 	super._ready()
+	_fit_giant()
 	# The arrival starts high above the roof; combat territory begins at landing.
 	awareness.home = Vector3(global_position.x, 6.55, global_position.z)
 	awareness.aggro_range = 18.0
 	awareness.leash_range = 30.0
+
+func _fit_giant() -> void:
+	animation_player.advance(0.0)
+	var bounds := AABB()
+	var first := true
+	for mesh: MeshInstance3D in skeleton_model.find_children("*", "MeshInstance3D", true, false):
+		var local: AABB = (skeleton_model.global_transform.affine_inverse() * mesh.global_transform) * mesh.get_aabb()
+		bounds = local if first else bounds.merge(local)
+		first = false
+	if not first and bounds.size.y > 0.01:
+		skeleton_model.scale = Vector3.ONE * (TARGET_HEIGHT / bounds.size.y)
+		skeleton_model.position.y = -bounds.position.y * skeleton_model.scale.y
+	var collider := get_node("CollisionShape3D") as CollisionShape3D
+	var body := CapsuleShape3D.new()
+	body.radius = 1.25
+	body.height = TARGET_HEIGHT
+	collider.shape = body
+	collider.position.y = TARGET_HEIGHT * 0.5
 
 func _import_clips() -> void:
 	var library := AnimationLibrary.new()

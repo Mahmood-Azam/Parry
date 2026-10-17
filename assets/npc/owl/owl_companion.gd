@@ -9,6 +9,8 @@ signal story_finished
 const OWL_SCENE := preload("res://assets/npc/owl/owl.glb")
 const ORBIT_RADIUS := 1.4
 const ORBIT_HEIGHT := 2.35
+const GREETING := preload("res://assets/npc/owl/owl_greeting.gd")
+var greeting: RefCounted
 
 var player: Node3D
 var model: Node3D
@@ -115,6 +117,7 @@ func call_owl(target: Node3D, message: String) -> bool:
 	return true
 
 func _interrupt_current() -> void:
+	_end_greeting()
 	if is_intro and state != "hidden":
 		_unlock_player()
 	if is_instance_valid(fade_tween):
@@ -173,6 +176,8 @@ func _process(delta: float) -> void:
 			visit_finished.emit()
 	elif state == "line":
 		global_position = player.global_position + hold_offset + Vector3.UP * (ORBIT_HEIGHT + sin(Time.get_ticks_msec() * 0.003) * 0.08)
+		if greeting != null:
+			greeting.update(elapsed)
 		_update_bubble_position()
 
 func _update_orbit(progress: float) -> void:
@@ -182,9 +187,19 @@ func _update_orbit(progress: float) -> void:
 	model.rotation.y = -angle - PI * 0.5
 
 func _show_line(line: String) -> void:
+	_end_greeting()
 	state = "line"
 	elapsed = 0.0
+	if is_intro and line.strip_edges().to_lower() == "salam ustaad":
+		var motion := GREETING.new()
+		if motion.begin(self, player, dialogue_durations[line_index]):
+			greeting = motion
 	_show_bubble(line, "")
+
+func _end_greeting() -> void:
+	if greeting != null:
+		greeting.end()
+		greeting = null
 
 func _show_bubble(line: String, prompt: String) -> void:
 	speech.text = line
@@ -268,6 +283,7 @@ func _lock_player() -> void:
 	player.set_process_unhandled_input(false)
 
 func _unlock_player() -> void:
+	_end_greeting()
 	_end_story_camera()
 	if not is_instance_valid(player):
 		return
@@ -286,6 +302,7 @@ func _unlock_player() -> void:
 	player.set_process_unhandled_input(saved_unhandled)
 
 func _exit_tree() -> void:
+	_end_greeting()
 	if is_intro and state != "hidden":
 		_unlock_player()
 	_end_story_camera()
@@ -322,7 +339,19 @@ func _update_story_camera(delta: float) -> void:
 	camera_elapsed += delta
 	var progress := smoothstep(0.0, 0.85, camera_elapsed)
 	story_camera.global_position = camera_from.lerp(camera_to, progress)
-	story_camera.look_at(player.global_position + Vector3.UP * 1.6)
+	var focus := player.global_position + Vector3.UP * 1.6
+	if is_instance_valid(previous_camera):
+		story_camera.fov = previous_camera.fov
+	if greeting != null:
+		var side_shot: Vector3 = player.global_position + greeting.player_basis * Vector3(-1.4, 1.75, 3.1)
+		var sight := PhysicsRayQueryParameters3D.create(focus, side_shot, 1)
+		var hit := player.get_world_3d().direct_space_state.intersect_ray(sight)
+		if not hit.is_empty():
+			side_shot = focus.lerp(hit.position, 0.8)
+		story_camera.global_position = story_camera.global_position.lerp(side_shot, greeting.blend * 0.75)
+		story_camera.fov = lerpf(story_camera.fov, 48.0, greeting.blend)
+		focus = focus.lerp(player.global_position + greeting.player_basis * Vector3(0.25, 1.40, 0.3), greeting.blend)
+	story_camera.look_at(focus)
 
 func _end_story_camera() -> void:
 	if is_instance_valid(previous_camera):

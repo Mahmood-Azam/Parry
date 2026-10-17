@@ -1,5 +1,5 @@
 extends Node3D
-## The three supplied assets, plus lightweight lighting/particles. No route-blocking collision.
+## The supplied breach assets, with fitted solid portal collision and lightweight FX.
 const METEOR := preload("res://assets/cinematics/breach/meteor.glb")
 const EXPLOSION := preload("res://assets/cinematics/breach/meteor_explosion.glb")
 const GATE := preload("res://assets/cinematics/breach/star_x_gate-zeta.glb")
@@ -37,6 +37,7 @@ func _ready() -> void:
 	explosion = _asset(EXPLOSION, "MeteorExplosion", 3.6, false)
 	gate = _asset(GATE, "EclipseGate", 8.0, true)
 	gate.set_script(preload("res://breach_gate.gd"))
+	gate.setup_collision()
 	shield = MeshInstance3D.new()
 	shield.name = "ImpactProtectionField"
 	var shell := SphereMesh.new()
@@ -163,6 +164,7 @@ func _particles(parent: Node3D, tint: Color, count: int, lifetime: float, speed:
 	return particles
 
 func prepare_intro() -> void:
+	gate.set_collision_enabled(false)
 	destruction.restore_intact()
 	cinematic = true
 	impact_started = false
@@ -206,6 +208,7 @@ func strike() -> void:
 	create_tween().tween_property(impact_light, "light_energy", 0.0, 1.1)
 
 func show_aftermath() -> void:
+	gate.set_collision_enabled(true)
 	destruction.destroy(false)
 	cinematic = false
 	meteor.show()

@@ -7,9 +7,15 @@ const BODY_NORMAL := preload("res://assets/enemies/gremlin/textures/T_Dokkeaibi_
 const EYES_TEXTURE := preload("res://assets/enemies/gremlin/textures/T_Yeux_BaseColor.png")
 
 func _ready() -> void:
+	add_to_group("gremlin")
 	_install_animations()
 	super._ready()
 	_apply_textures()
+
+func _physics_process(delta: float) -> void:
+	super._physics_process(delta)
+	if not is_dead and not is_attacking and stun_remaining <= 0.0:
+		animation_player.speed_scale = 1.5 if current_animation == &"Lesha_walk" else 1.0
 
 func _install_animations() -> void:
 	var library := AnimationLibrary.new()
