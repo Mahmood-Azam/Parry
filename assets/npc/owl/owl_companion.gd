@@ -31,6 +31,11 @@ var saved_input := true
 var saved_unhandled := true
 var poof_node: Node3D
 var fade_tween: Tween
+var story_camera: Camera3D
+var previous_camera: Camera3D
+var camera_from := Vector3.ZERO
+var camera_to := Vector3.ZERO
+var camera_elapsed := 0.0
 
 func _ready() -> void:
 	process_mode = Node.PROCESS_MODE_PAUSABLE
@@ -94,8 +99,9 @@ func start_story(target: Node3D, lines: Array[String], durations: Array[float]) 
 	dialogue_lines = lines.duplicate()
 	dialogue_durations = durations.duplicate()
 	orbit_duration = 2.8
-	_start_orbit()
 	_lock_player()
+	_start_story_camera()
+	_start_orbit()
 
 func call_owl(target: Node3D, message: String) -> bool:
 	if not intro_seen or state != "hidden":
@@ -115,6 +121,7 @@ func _interrupt_current() -> void:
 		fade_tween.kill()
 	if is_instance_valid(poof_node):
 		poof_node.queue_free()
+	_end_story_camera()
 	poof_node = null
 	state = "hidden"
 
@@ -122,7 +129,7 @@ func _start_orbit() -> void:
 	state = "orbit"
 	elapsed = 0.0
 	var camera := get_viewport().get_camera_3d()
-	var toward_camera := camera.global_position - player.global_position if camera else Vector3(1, 0, 1)
+	var toward_camera := camera_to - player.global_position if is_intro and is_instance_valid(story_camera) else (camera.global_position - player.global_position if camera else Vector3(1, 0, 1))
 	toward_camera.y = 0.0
 	if toward_camera.length_squared() < 0.01:
 		toward_camera = Vector3(1, 0, 1)
@@ -136,6 +143,7 @@ func _start_orbit() -> void:
 func _process(delta: float) -> void:
 	if not is_instance_valid(player) or state == "hidden":
 		return
+	_update_story_camera(delta)
 	elapsed += delta
 	if state == "orbit":
 		_update_orbit(minf(elapsed / orbit_duration, 1.0))
@@ -250,11 +258,17 @@ func _lock_player() -> void:
 	saved_unhandled = player.is_processing_unhandled_input()
 	if player is CharacterBody3D:
 		player.velocity = Vector3.ZERO
+		var actor_animation := player.get_node_or_null("WarriorKnight/AnimationPlayer") as AnimationPlayer
+		if actor_animation != null and actor_animation.has_animation("Idle"):
+			actor_animation.speed_scale = 1.0
+			player.set("last_animation", "")
+			player.call("_play", "Idle")
 	player.set_physics_process(false)
 	player.set_process_input(false)
 	player.set_process_unhandled_input(false)
 
 func _unlock_player() -> void:
+	_end_story_camera()
 	if not is_instance_valid(player):
 		return
 	player.set_physics_process(saved_physics)
@@ -264,3 +278,46 @@ func _unlock_player() -> void:
 func _exit_tree() -> void:
 	if is_intro and state != "hidden":
 		_unlock_player()
+	_end_story_camera()
+
+func _start_story_camera() -> void:
+	previous_camera = get_viewport().get_camera_3d()
+	if previous_camera == null:
+		return
+	var character := player.get_node_or_null("WarriorKnight") as Node3D
+	var forward := character.global_basis.z if character != null else player.global_basis.z
+	forward.y = 0.0
+	forward = forward.normalized()
+	if forward.length_squared() < 0.01:
+		forward = Vector3.FORWARD
+	var focus := player.global_position + Vector3.UP * 1.5
+	camera_to = focus + forward * 3.4 + Vector3.UP * 0.35
+	var ray := PhysicsRayQueryParameters3D.create(focus, camera_to, 1)
+	var hit := player.get_world_3d().direct_space_state.intersect_ray(ray)
+	if not hit.is_empty():
+		camera_to = focus.lerp(hit.position, 0.8)
+	camera_from = previous_camera.global_position
+	camera_elapsed = 0.0
+	story_camera = Camera3D.new()
+	story_camera.name = "OwlStoryCamera"
+	story_camera.fov = previous_camera.fov
+	story_camera.near = previous_camera.near
+	get_parent().add_child(story_camera)
+	story_camera.global_transform = previous_camera.global_transform
+	story_camera.make_current()
+
+func _update_story_camera(delta: float) -> void:
+	if not is_instance_valid(story_camera):
+		return
+	camera_elapsed += delta
+	var progress := smoothstep(0.0, 0.85, camera_elapsed)
+	story_camera.global_position = camera_from.lerp(camera_to, progress)
+	story_camera.look_at(player.global_position + Vector3.UP * 1.6)
+
+func _end_story_camera() -> void:
+	if is_instance_valid(previous_camera):
+		previous_camera.make_current()
+	if is_instance_valid(story_camera):
+		story_camera.queue_free()
+	story_camera = null
+	previous_camera = null

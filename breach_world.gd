@@ -272,8 +272,32 @@ func restore_campus(seconds: float = 2.5) -> void:
 	if destruction.destroyed:
 		destruction.reverse_destruction(seconds)
 		await destruction.restored
+	_restore_daylight()
 	meteor.hide()
 	explosion.hide()
 	scorch.hide()
 	gate.hide()
 	gate_motes.emitting = false
+
+func _restore_daylight() -> void:
+	var campus := get_parent().get_node("CampusMap")
+	for node: WorldEnvironment in campus.find_children("*", "WorldEnvironment", true, false):
+		if node.environment == null:
+			continue
+		var daylight := node.environment.duplicate(true) as Environment
+		daylight.ambient_light_color = Color(0.72, 0.80, 0.94)
+		daylight.ambient_light_energy = 1.0
+		daylight.fog_density = 0.0015
+		daylight.fog_light_color = Color(0.67, 0.79, 0.94)
+		daylight.fog_sky_affect = 0.0
+		daylight.adjustment_saturation = 1.0
+		if daylight.sky != null and daylight.sky.sky_material is ProceduralSkyMaterial:
+			var sky := daylight.sky.sky_material as ProceduralSkyMaterial
+			sky.sky_top_color = Color(0.16, 0.42, 0.8)
+			sky.sky_horizon_color = Color(0.66, 0.78, 0.9)
+			sky.ground_horizon_color = Color(0.66, 0.78, 0.9)
+			sky.ground_bottom_color = Color(0.28, 0.31, 0.32)
+		node.environment = daylight
+	for light: DirectionalLight3D in campus.find_children("*", "DirectionalLight3D", true, false):
+		light.light_color = Color(1.0, 0.91, 0.76)
+		light.light_energy = 1.4

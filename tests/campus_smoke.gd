@@ -68,9 +68,14 @@ func run() -> void:
 	player.ultimate_controller.ultimate_finished.emit("focused")
 	await process_frame
 	assert(is_instance_valid(director.owl) and director.owl.get("state") == "orbit")
+	assert(director.pickup_prompt.self_modulate.a > 0.99, "Relic pickup prompt must remain visible to the HUD")
+	assert(player.animation_player.current_animation == "Idle", "Owl story must settle the player into idle")
+	assert(root.get_camera_3d() == director.owl.story_camera, "Owl story must use a front-facing camera")
 	assert(not scene.victory_panel.visible and not paused)
 	director.owl.set_process(false)
 	director.owl.call("_process", 2.8)
+	assert(director.owl.bubble.visible and director.owl.bubble.modulate.a > 0.99 and director.owl.speech.self_modulate.a > 0.99, "Owl dialogue must be readable")
+	assert((director.owl.story_camera.global_position - player.global_position).normalized().dot(player.character.global_basis.z) > 0.5, "Owl camera must pan in front of the player")
 	for seconds in director.FIRST_OWL_DURATIONS:
 		director.owl.call("_process", seconds)
 	director.owl.call("_process", 0.65)
@@ -150,13 +155,25 @@ func run() -> void:
 	director._input(collect_key)
 	assert(director.relic_phase == director.PHASE_FINAL_BOSS and is_instance_valid(director.bara))
 	assert(is_equal_approx(director.bara.max_health, director.mutant.max_health * 2.0))
+	assert(director.bara.animation_player.current_animation == "Idle", "Bara Ustaad must spawn in an idle pose")
 	await create_timer(3.2, false).timeout
 	assert(director.bara.engaged and director.bara.process_mode == Node.PROCESS_MODE_PAUSABLE)
+	assert(director.bara.awareness.home.distance_to(Vector3(48.2, 6.55, -85.3)) < 0.1, "Bara Ustaad territory must start on the roof")
+	var boss_attacks := [0]
+	director.bara.animation_player.animation_started.connect(func(clip: StringName) -> void:
+		if clip in [&"AttackHorizontal", &"AttackDownward", &"AttackKick"]:
+			boss_attacks[0] += 1
+	)
+	player.is_invulnerable = true
+	await create_timer(8.0, false).timeout
+	assert(boss_attacks[0] >= 2, "Bara Ustaad must continue attacking after the arrival")
 	director.bara.take_damage(999999.0, player)
 	assert(director.completed and director.relic_phase == director.PHASE_COMPLETE)
 	await create_timer(5.1, true).timeout
 	assert(not scene.breach_world.gate.visible, "The portal must close after Bara Ustaad falls")
 	assert(scene.victory_panel.visible and paused, "The final fight must lead to the victory screen")
+	var daylight: WorldEnvironment = scene.get_node("CampusMap").find_children("*", "WorldEnvironment", true, false)[0]
+	assert(daylight.environment.sky.sky_material.sky_top_color.b > 0.5, "Victory must restore a blue daytime sky")
 	print("PASS three relics, Owl visits, Mutant, rooftop arrival and final boss")
 	scene._new_game()
 	await create_timer(0.3, true).timeout

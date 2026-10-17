@@ -19,6 +19,13 @@ const REACTIONS: Array[StringName] = [&"HitLeft", &"HitRight", &"HitGut"]
 var hit_reacting := false
 var last_attack: StringName = &""
 
+func _ready() -> void:
+	super._ready()
+	# The arrival starts high above the roof; combat territory begins at landing.
+	awareness.home = Vector3(global_position.x, 6.55, global_position.z)
+	awareness.aggro_range = 18.0
+	awareness.leash_range = 30.0
+
 func _import_clips() -> void:
 	var library := AnimationLibrary.new()
 	for clip_name: String in BARA_CLIPS:

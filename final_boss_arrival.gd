@@ -45,11 +45,12 @@ func begin(target: CharacterBody3D) -> void:
 	boss.attack_range = 2.2
 	boss.collision_layer = 0
 	boss.collision_mask = 0
-	boss.process_mode = Node.PROCESS_MODE_DISABLED
+	boss.process_mode = Node.PROCESS_MODE_PAUSABLE
 	get_parent().add_child(boss)
+	boss.set_physics_process(false)
 	boss.health_bar.hide()
-	boss.animation_player.speed_scale = 1.8
-	boss._play(&"EntranceJump", true)
+	boss._play(&"Idle", true)
+	boss.animation_player.advance(0.0)
 	boss.jump_sound.play()
 	_play_arrival()
 
@@ -68,6 +69,8 @@ func _play_arrival() -> void:
 	await get_tree().create_timer(0.35, false).timeout
 	if not is_inside_tree():
 		return
+	boss.animation_player.speed_scale = 1.8
+	boss._play(&"EntranceJump", true)
 	var leap := create_tween()
 	leap.tween_property(boss, "global_position", LANDING, 1.3).set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_IN)
 	await leap.finished
@@ -82,8 +85,9 @@ func _play_arrival() -> void:
 	boss.collision_mask = 7
 	boss.animation_player.speed_scale = 1.0
 	boss._play(&"Idle", true)
+	boss.awareness.home = LANDING
 	boss.engaged = true
-	boss.process_mode = Node.PROCESS_MODE_PAUSABLE
+	boss.set_physics_process(true)
 	landed.emit(boss)
 	queue_free()
 

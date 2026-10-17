@@ -270,6 +270,7 @@ func _build_hud() -> void:
 	objective.add_theme_constant_override("shadow_offset_y", 2)
 	canvas.add_child(objective)
 	pickup_prompt = Label.new()
+	pickup_prompt.name = "RelicPickupPrompt"
 	pickup_prompt.set_anchors_and_offsets_preset(Control.PRESET_CENTER_BOTTOM)
 	pickup_prompt.position = Vector2(-170, -140)
 	pickup_prompt.size = Vector2(340, 34)
